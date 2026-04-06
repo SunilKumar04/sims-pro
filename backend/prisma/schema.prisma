@@ -1,0 +1,226 @@
+// ═══════════════════════════════════════════════════════
+//  SIMS Pro – School Information Management System
+//  Prisma Schema · PostgreSQL
+// ═══════════════════════════════════════════════════════
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─────────────────── ENUMS ───────────────────
+
+enum Role {
+  ADMIN
+  TEACHER
+  STUDENT
+  PARENT
+}
+
+enum FeeStatus {
+  PAID
+  PENDING
+  PARTIAL
+}
+
+enum Priority {
+  HIGH
+  MEDIUM
+  LOW
+}
+
+enum AttendanceStatus {
+  PRESENT
+  ABSENT
+  LATE
+}
+
+enum ExamType {
+  UNIT_TEST
+  MID_TERM
+  FINAL
+  PRACTICALS
+}
+
+// ─────────────────── USER (Auth) ───────────────────
+
+model User {
+  id           String    @id @default(cuid())
+  email        String    @unique
+  password     String
+  role         Role      @default(STUDENT)
+  name         String
+  isActive     Boolean   @default(true)
+  refreshToken String?
+  lastLogin    DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  student  Student?
+  teacher  Teacher?
+
+  @@map("users")
+}
+
+// ─────────────────── STUDENT ───────────────────
+
+model Student {
+  id         String   @id @default(cuid())
+  userId     String   @unique
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  roll       String   @unique
+  className  String
+  phone      String
+  parentName String
+  parentPhone String  @default("")
+  address    String
+  dob        DateTime
+  photoUrl   String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  fees       Fee[]
+  attendance Attendance[]
+  marks      Mark[]
+
+  @@map("students")
+}
+
+// ─────────────────── TEACHER ───────────────────
+
+model Teacher {
+  id            String   @id @default(cuid())
+  userId        String   @unique
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  employeeCode  String   @unique
+  subject       String
+  assignedClasses String
+  phone         String
+  qualification String
+  experience    String
+  salary        Int
+  photoUrl      String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  homework   Homework[]
+  attendance Attendance[]
+
+  @@map("teachers")
+}
+
+// ─────────────────── CLASS ───────────────────
+
+model Class {
+  id           String   @id @default(cuid())
+  name         String   @unique
+  teacherName  String   @default("")
+  room         String
+  subject      String
+  studentCount Int      @default(0)
+  grade        String
+  section      String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@map("classes")
+}
+
+// ─────────────────── FEE ───────────────────
+
+model Fee {
+  id         String    @id @default(cuid())
+  studentId  String
+  student    Student   @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  term       String
+  tuition    Int       @default(0)
+  transport  Int       @default(0)
+  lab        Int       @default(0)
+  sports     Int       @default(0)
+  amount     Int
+  paid       Int       @default(0)
+  status     FeeStatus @default(PENDING)
+  paidDate   DateTime?
+  receiptNo  String?   @unique
+  remarks    String?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  @@map("fees")
+}
+
+// ─────────────────── NOTICE ───────────────────
+
+model Notice {
+  id        String   @id @default(cuid())
+  title     String
+  body      String
+  target    String   @default("All")
+  priority  Priority @default(MEDIUM)
+  isPublished Boolean @default(true)
+  publishedBy String @default("Admin")
+  expiresAt DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("notices")
+}
+
+// ─────────────────── HOMEWORK ───────────────────
+
+model Homework {
+  id          String   @id @default(cuid())
+  teacherId   String
+  teacher     Teacher  @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  subject     String
+  className   String
+  title       String
+  description String
+  dueDate     DateTime
+  attachmentUrl String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("homework")
+}
+
+// ─────────────────── ATTENDANCE ───────────────────
+
+model Attendance {
+  id        String           @id @default(cuid())
+  studentId String
+  student   Student          @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  teacherId String
+  teacher   Teacher          @relation(fields: [teacherId], references: [id])
+  date      DateTime         @db.Date
+  status    AttendanceStatus @default(PRESENT)
+  remark    String?
+  createdAt DateTime         @default(now())
+
+  @@unique([studentId, date])
+  @@map("attendance")
+}
+
+// ─────────────────── MARKS ───────────────────
+
+model Mark {
+  id        String   @id @default(cuid())
+  studentId String
+  student   Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  subject   String
+  examType  ExamType @default(UNIT_TEST)
+  marks     Int
+  maxMarks  Int      @default(100)
+  grade     String?
+  className String
+  year      Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([studentId, subject, examType, year])
+  @@map("marks")
+}
