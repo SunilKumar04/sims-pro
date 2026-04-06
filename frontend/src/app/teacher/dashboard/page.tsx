@@ -41,7 +41,12 @@ export default function TeacherDashboard() {
 
   const now = new Date();
   const hours = now.getHours();
-  const greet = hours<12?'Good morning':'hours<18'?'Good afternoon':'Good evening';
+  const greet =
+  hours < 12
+    ? 'Good morning'
+    : hours < 18
+    ? 'Good afternoon'
+    : 'Good evening';
 
   return (
     <AppShell title="My Dashboard" subtitle="Today's overview">
