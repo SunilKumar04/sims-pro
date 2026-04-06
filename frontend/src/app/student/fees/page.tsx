@@ -15,7 +15,7 @@ export default function StudentFees() {
 
   useEffect(() => {
     if (!user?.id) { setLoading(false); return; }
-    feesApi.getByStudent(user?.studentId || user?.id)
+    feesApi.getByStudent(user?.id)
       .then(r => setFeeData(r.data.data||[]))
       .catch(() => {
         // Demo fallback
