@@ -3,7 +3,7 @@ import { NestFactory } from '@nestjs/core';
 import { ValidationPipe, VersioningType } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { ConfigService } from '@nestjs/config';
-import * as cookieParser from 'cookie-parser';
+import cookieParser from 'cookie-parser';
 import helmet from 'helmet';
 import { AppModule } from './app.module';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
@@ -15,15 +15,29 @@ async function bootstrap() {
 
   const configService = app.get(ConfigService);
   const port = configService.get<number>('PORT', 4000);
-  const clientUrl = configService.get<string>('CLIENT_URL', 'http://localhost:3000');
+
+  // ✅ ENV based frontend URLs (comma separated support)
+  const clientUrls = configService
+    .get<string>('CLIENT_URL', 'http://localhost:3000')
+    .split(',')
+    .map((url) => url.trim());
 
   // ── Security ──
   app.use(helmet());
   app.use(cookieParser());
 
-  // ── CORS ──
+  // ── CORS (Production Ready) ──
   app.enableCors({
-    origin: [clientUrl, 'http://localhost:3000'],
+    origin: (origin, callback) => {
+      // allow requests with no origin (mobile apps, postman)
+      if (!origin) return callback(null, true);
+
+      if (clientUrls.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error('Not allowed by CORS'));
+      }
+    },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
@@ -33,7 +47,7 @@ async function bootstrap() {
   app.setGlobalPrefix('api');
   app.enableVersioning({ type: VersioningType.URI, defaultVersion: '1' });
 
-  // ── Global Pipes & Filters ──
+  // ── Pipes & Filters ──
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
@@ -44,24 +58,15 @@ async function bootstrap() {
   );
   app.useGlobalFilters(new HttpExceptionFilter());
 
-  // ── Swagger API Docs ──
+  // ── Swagger ──
   const config = new DocumentBuilder()
     .setTitle('SIMS Pro API')
-    .setDescription('School Information Management System – REST API Documentation')
+    .setDescription('School Information Management System – REST API')
     .setVersion('1.0')
     .addBearerAuth(
       { type: 'http', scheme: 'bearer', bearerFormat: 'JWT', in: 'header' },
       'JWT-Auth',
     )
-    .addTag('Auth', 'Authentication endpoints')
-    .addTag('Students', 'Student management')
-    .addTag('Teachers', 'Teacher management')
-    .addTag('Classes', 'Class & section management')
-    .addTag('Fees', 'Fee management')
-    .addTag('Notices', 'Notice board')
-    .addTag('Homework', 'Homework management')
-    .addTag('Attendance', 'Attendance tracking')
-    .addTag('Dashboard', 'Analytics & statistics')
     .build();
 
   const document = SwaggerModule.createDocument(app, config);
@@ -70,13 +75,14 @@ async function bootstrap() {
   });
 
   await app.listen(port);
+
   console.log(`
   ╔══════════════════════════════════════════════╗
   ║      SIMS Pro – Backend Server Running       ║
   ╠══════════════════════════════════════════════╣
-  ║  API:    http://localhost:${port}/api/v1          ║
-  ║  Docs:   http://localhost:${port}/api/docs        ║
-  ║  Port:   ${port}                                ║
+  ║  API:    http://localhost:${port}/api/v1     ║
+  ║  Docs:   http://localhost:${port}/api/docs   ║
+  ║  Port:   ${port}                            ║
   ╚══════════════════════════════════════════════╝
   `);
 }
