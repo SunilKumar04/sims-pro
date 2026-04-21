@@ -88,7 +88,7 @@ export default function AdminNotices() {
     <AppShell title="Notice Board" subtitle="Publish & manage school announcements">
 
       {/* STATS */}
-      <div className="grid grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-1 gap-4 mb-6 sm:grid-cols-2 xl:grid-cols-4">
         {[
           { icon:'📢', label:'Total Notices',    value: stats.total, col:'#F0C040', bg:'rgba(212,160,23,0.12)', bd:'rgba(212,160,23,0.2)' },
           { icon:'🔴', label:'High Priority',    value: stats.high,  col:'#FCA5A5', bg:'rgba(239,68,68,0.12)',  bd:'rgba(239,68,68,0.2)'  },
@@ -229,7 +229,7 @@ export default function AdminNotices() {
                 <label className="block text-xs font-bold mb-1.5 uppercase tracking-wider" style={{color:'rgba(255,255,255,0.4)'}}>Title *</label>
                 <input value={form.title||''} onChange={e=>sf('title',e.target.value)} className="sims-input" placeholder="Notice title"/>
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <div>
                   <label className="block text-xs font-bold mb-1.5 uppercase tracking-wider" style={{color:'rgba(255,255,255,0.4)'}}>Target Audience</label>
                   <select value={form.target||'All'} onChange={e=>sf('target',e.target.value)} className="sims-input">

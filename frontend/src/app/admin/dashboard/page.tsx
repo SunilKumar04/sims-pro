@@ -29,7 +29,7 @@ export default function AdminDashboard() {
 
   if (loading) return (
     <AppShell title="Dashboard" subtitle="Loading your overview...">
-      <div className="grid grid-cols-4 gap-5 mb-6">
+      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {[...Array(4)].map((_, i) => (
           <div key={i} className="skeleton h-32 rounded-2xl" />
         ))}
@@ -64,20 +64,20 @@ export default function AdminDashboard() {
   };
 
   return (
-    <AppShell title="Dashboard" subtitle="School overview & statistics">
+      <AppShell title="Dashboard" subtitle="School overview & statistics">
 
       {/* ── STAT CARDS ── */}
-      <div className="grid grid-cols-4 gap-5 mb-6">
+      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {statCards.map(c => {
           const col = colorMap[c.color];
           return (
             <Link key={c.label} href={c.href}
-                  className="glass rounded-2xl p-6 transition-all hover:-translate-y-1 hover:shadow-xl relative overflow-hidden cursor-pointer">
+                  className="glass rounded-2xl p-5 sm:p-6 transition-all hover:-translate-y-1 hover:shadow-xl relative overflow-hidden cursor-pointer">
               <div className="w-11 h-11 rounded-xl flex items-center justify-center text-xl mb-4"
                    style={{ background: col.bg, border: `1px solid ${col.border}` }}>
                 {c.icon}
               </div>
-              <div className="text-3xl font-black tracking-tight" style={{ color: col.val }}>{c.value}</div>
+              <div className="break-words text-2xl font-black tracking-tight sm:text-3xl" style={{ color: col.val }}>{c.value}</div>
               <div className="text-xs mt-1 font-medium" style={{ color: 'rgba(255,255,255,0.4)' }}>{c.label}</div>
               <div className="text-xs font-bold mt-3"
                    style={{ color: c.changeType === 'up' ? '#86EFAC' : c.changeType === 'down' ? '#FCA5A5' : 'rgba(255,255,255,0.3)' }}>
@@ -89,17 +89,17 @@ export default function AdminDashboard() {
       </div>
 
       {/* ── CHARTS ROW ── */}
-      <div className="grid grid-cols-2 gap-6 mb-6">
+      <div className="mb-6 grid grid-cols-1 gap-6 xl:grid-cols-2">
         {/* Monthly Fees Bar Chart */}
-        <div className="glass rounded-2xl p-6">
-          <div className="flex items-center justify-between mb-5">
+        <div className="glass rounded-2xl p-5 sm:p-6">
+          <div className="sims-section-header mb-5">
             <div>
               <h3 className="text-base font-bold">Monthly Fee Collection</h3>
               <p className="text-xs mt-0.5" style={{ color: 'rgba(255,255,255,0.4)' }}>Current year performance</p>
             </div>
             <span className="px-3 py-1 rounded-full text-xs font-bold" style={{ background: 'rgba(212,160,23,0.15)', color: '#F0C040' }}>2024</span>
           </div>
-          <ResponsiveContainer width="100%" height={180}>
+          <ResponsiveContainer width="100%" height={220}>
             <BarChart data={stats?.monthlyFees || []} barSize={22}>
               <XAxis dataKey="month" tick={{ fill: 'rgba(255,255,255,0.35)', fontSize: 11 }} axisLine={false} tickLine={false} />
               <YAxis hide />
@@ -119,20 +119,22 @@ export default function AdminDashboard() {
         </div>
 
         {/* Fee Status Donut */}
-        <div className="glass rounded-2xl p-6">
+        <div className="glass rounded-2xl p-5 sm:p-6">
           <div className="mb-5">
             <h3 className="text-base font-bold">Fee Status Breakdown</h3>
             <p className="text-xs mt-0.5" style={{ color: 'rgba(255,255,255,0.4)' }}>Current term overview</p>
           </div>
-          <div className="flex items-center justify-between">
-            <ResponsiveContainer width="55%" height={160}>
-              <PieChart>
-                <Pie data={feeDonut} cx="50%" cy="50%" innerRadius={45} outerRadius={70} paddingAngle={3} dataKey="value">
-                  {feeDonut.map((_, i) => <Cell key={i} fill={COLORS[i]} />)}
-                </Pie>
-              </PieChart>
-            </ResponsiveContainer>
-            <div className="space-y-3 flex-1">
+          <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
+            <div className="h-40 w-full md:w-[55%]">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie data={feeDonut} cx="50%" cy="50%" innerRadius={45} outerRadius={70} paddingAngle={3} dataKey="value">
+                    {feeDonut.map((_, i) => <Cell key={i} fill={COLORS[i]} />)}
+                  </Pie>
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+            <div className="flex-1 space-y-3">
               {feeDonut.map((item, i) => (
                 <div key={item.name} className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
@@ -154,9 +156,9 @@ export default function AdminDashboard() {
       </div>
 
       {/* ── BOTTOM GRID ── */}
-      <div className="grid grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 2xl:grid-cols-3">
         {/* Today's Attendance */}
-        <div className="glass rounded-2xl p-6">
+        <div className="glass rounded-2xl p-5 sm:p-6">
           <h3 className="text-sm font-bold mb-4">Today's Attendance</h3>
           {[
             { label: 'Present', value: stats?.attendance?.present || 0, color: '#86EFAC', bar: '#22C55E' },
@@ -174,7 +176,7 @@ export default function AdminDashboard() {
         </div>
 
         {/* Quick Stats */}
-        <div className="glass rounded-2xl p-6">
+        <div className="glass rounded-2xl p-5 sm:p-6">
           <h3 className="text-sm font-bold mb-4">Quick Overview</h3>
           {[
             { label: 'Active Notices', value: stats?.overview?.notices  || 0, icon: '📢' },
@@ -193,15 +195,15 @@ export default function AdminDashboard() {
         </div>
 
         {/* Recent Notices */}
-        <div className="glass rounded-2xl p-6">
-          <div className="flex items-center justify-between mb-4">
+        <div className="glass rounded-2xl p-5 sm:p-6">
+          <div className="sims-section-header mb-4">
             <h3 className="text-sm font-bold">Latest Notices</h3>
             <Link href="/admin/notices" className="text-xs font-bold text-yellow-400 hover:text-yellow-300">View All</Link>
           </div>
           <div className="space-y-3">
             {notices.slice(0, 3).map(n => (
               <div key={n.id} className="p-3 rounded-xl" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
-                <div className="flex items-start justify-between gap-2 mb-1">
+                <div className="mb-1 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                   <span className="text-sm font-bold leading-tight text-white">{n.title}</span>
                   {priorityBadge(n.priority)}
                 </div>

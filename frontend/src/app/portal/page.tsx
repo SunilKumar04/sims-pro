@@ -126,7 +126,7 @@ export default function PortalPage() {
       </div>
 
       {/* ── HEADER ── */}
-      <header className="relative z-10 flex items-center justify-between px-10 border-b" style={{ height: 80, borderColor: 'rgba(255,255,255,0.08)', backdropFilter: 'blur(20px)' }}>
+      <header className="relative z-10 flex flex-wrap items-center justify-between gap-4 border-b px-5 py-5 md:px-10" style={{ minHeight: 80, borderColor: 'rgba(255,255,255,0.08)', backdropFilter: 'blur(20px)' }}>
         <div className="flex items-center gap-4">
           <div className="w-14 h-14 rounded-2xl flex items-center justify-center text-3xl flex-shrink-0"
                style={{ background: 'linear-gradient(135deg,#D4A017,#F0C040)', boxShadow: '0 4px 20px rgba(212,160,23,0.4)' }}>🎓</div>
@@ -188,7 +188,7 @@ export default function PortalPage() {
       </div>
 
       {/* ── PORTAL CARDS ── */}
-      <div className="relative z-10 grid grid-cols-1 md:grid-cols-3 gap-6 max-w-6xl mx-auto w-full px-10 mb-12">
+      <div className="relative z-10 grid grid-cols-1 gap-6 max-w-6xl mx-auto mb-12 w-full px-5 md:grid-cols-3 md:px-10">
         {PORTALS.map((p, i) => (
           <div key={p.id}
                className={`rounded-2xl border p-8 cursor-pointer transition-all duration-300 hover:-translate-y-2 hover:shadow-2xl glass ${p.border} bg-gradient-to-b ${p.gradient} animate-fade-up`}
@@ -220,7 +220,7 @@ export default function PortalPage() {
       </div>
 
       {/* ── FEATURE CHIPS ── */}
-      <div className="relative z-10 grid grid-cols-4 md:grid-cols-8 gap-3 max-w-5xl mx-auto w-full px-10 mb-10">
+      <div className="relative z-10 grid grid-cols-2 gap-3 max-w-5xl mx-auto mb-10 w-full px-5 sm:grid-cols-4 md:grid-cols-8 md:px-10">
         {FEATURES.map(f => (
           <div key={f.label} className="glass rounded-xl p-4 text-center transition-all hover:bg-white/[0.08] hover:-translate-y-1 cursor-default">
             <div className="text-2xl mb-2">{f.icon}</div>
@@ -230,7 +230,7 @@ export default function PortalPage() {
       </div>
 
       {/* ── FOOTER ── */}
-      <footer className="relative z-10 mt-auto border-t px-10 py-7 flex items-center justify-between"
+      <footer className="relative z-10 mt-auto flex flex-col items-start justify-between gap-3 border-t px-5 py-7 md:flex-row md:items-center md:px-10"
               style={{ borderColor: 'rgba(255,255,255,0.08)', background: 'rgba(0,0,0,0.2)' }}>
         <div className="text-sm" style={{ color: 'rgba(255,255,255,0.5)' }}>
           <strong className="text-white">{SCHOOL.name}</strong><br/>

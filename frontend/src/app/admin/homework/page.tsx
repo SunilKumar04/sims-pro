@@ -152,7 +152,7 @@ export default function AdminHomework() {
     <AppShell title="Homework Management" subtitle={`${hw.length} assignments across all classes`}>
 
       {/* STATS */}
-      <div className="grid grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-1 gap-4 mb-6 sm:grid-cols-2 xl:grid-cols-4">
         {[
           {icon:'📚',label:'Total Assigned',  value:hw.length,        col:'#F0C040',bg:'rgba(212,160,23,0.12)',bd:'rgba(212,160,23,0.2)'},
           {icon:'⏳',label:'Due This Week',   value:upcoming.filter(h=>{const d=Math.ceil((new Date(h.dueDate).getTime()-Date.now())/(1000*60*60*24));return d>=0&&d<=7;}).length, col:'#93C5FD',bg:'rgba(30,144,255,0.12)',bd:'rgba(30,144,255,0.2)'},
@@ -200,7 +200,7 @@ export default function AdminHomework() {
 
       {/* LOADING */}
       {loading && (
-        <div className="grid grid-cols-3 gap-5">
+        <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
           {[...Array(6)].map((_,i)=><div key={i} className="skeleton h-48 rounded-2xl"/>)}
         </div>
       )}
@@ -232,7 +232,7 @@ export default function AdminHomework() {
             </span>
             <div className="h-px flex-1" style={{background:'rgba(239,68,68,0.2)'}}/>
           </div>
-          <div className="grid grid-cols-3 gap-5">
+          <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
             {overdue.map(h=><HWCard key={h.id} h={h}/>)}
           </div>
         </div>
@@ -247,7 +247,7 @@ export default function AdminHomework() {
               <div className="h-px flex-1" style={{background:'rgba(255,255,255,0.07)'}}/>
             </div>
           )}
-          <div className="grid grid-cols-3 gap-5">
+          <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
             {upcoming.map(h=><HWCard key={h.id} h={h}/>)}
           </div>
         </div>
@@ -275,7 +275,7 @@ export default function AdminHomework() {
                 <input value={form.title||''} onChange={e=>sf('title',e.target.value)}
                        className="sims-input" placeholder="e.g. Chapter 5 – Quadratic Equations"/>
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <div>
                   <label className="block text-xs font-bold mb-1.5 uppercase tracking-wider" style={{color:'rgba(255,255,255,0.4)'}}>Subject *</label>
                   <select value={form.subject||''} onChange={e=>sf('subject',e.target.value)} className="sims-input">

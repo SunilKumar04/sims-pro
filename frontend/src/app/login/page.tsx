@@ -1,5 +1,5 @@
 'use client';
-// src/app/login/page.tsx
+
 import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
@@ -7,180 +7,348 @@ import { authApi } from '@/lib/api';
 import { getRoleRedirect } from '@/lib/auth';
 
 type RoleId = 'admin' | 'teacher' | 'student';
+type Screen = 'login' | 'forgot' | 'reset' | 'done';
 
-const META: Record<RoleId, {
-  title: string; desc: string; idLabel: string; placeholder: string;
-  demoEmail: string; demoPass: string; features: [string, string][];
-  btnCls: string; accentBg: string; accentBorder: string;
-}> = {
+const META: Record<RoleId, any> = {
   admin: {
     title: 'Admin Portal',
     desc: 'Login with your admin credentials to manage the entire school ecosystem.',
-    idLabel: 'ADMIN EMAIL', placeholder: 'admin@gnpss.edu.in',
-    demoEmail: 'admin@gnpss.edu.in', demoPass: 'Admin@1234',
-    features: [['🛡️','Full Dashboard & Analytics'],['👥','Student & Teacher Mgmt'],['💰','Fee & Finance Control'],['📢','Notice Publisher & Settings']],
-    btnCls: 'from-yellow-600 to-yellow-400 text-stone-900',
-    accentBg: 'rgba(212,160,23,0.12)', accentBorder: 'rgba(212,160,23,0.3)',
+    email: 'admin@gnpss.edu.in',
+    pass: 'Admin@1234',
+    color: '#F0C040',
+    features: [
+      ['🛡️','Full Dashboard & Analytics'],
+      ['👥','Student & Teacher Mgmt'],
+      ['💰','Fee & Finance Control'],
+      ['📢','Notice Publisher & Settings'],
+    ],
   },
   teacher: {
     title: 'Teacher Portal',
-    desc: 'Login with your Employee Code and Password to access your classroom tools.',
-    idLabel: 'TEACHER EMAIL', placeholder: 'teacher@gnpss.edu.in',
-    demoEmail: 'sunita@gnpss.edu.in', demoPass: 'Teacher@1234',
-    features: [['✅','Daily Attendance Marking'],['📚','Homework Assignment'],['📝','Marks & Grade Entry'],['📅','Class Schedule View']],
-    btnCls: 'from-blue-600 to-blue-400 text-white',
-    accentBg: 'rgba(30,144,255,0.12)', accentBorder: 'rgba(30,144,255,0.3)',
+    desc: 'Manage classroom tools and students.',
+    email: 'sunita@gnpss.edu.in',
+    pass: 'Teacher@1234',
+    color: '#60A5FA',
+    features: [
+      ['✅','Attendance'],
+      ['📚','Homework'],
+      ['📝','Marks'],
+      ['📅','Schedule'],
+    ],
   },
   student: {
-    title: 'Student / Parent Login',
-    desc: 'Login with your UID and Password to access your academic portal.',
-    idLabel: 'STUDENT EMAIL / UID', placeholder: 'aarav@student.gnpss.edu.in',
-    demoEmail: 'aarav@student.gnpss.edu.in', demoPass: 'Student@1234',
-    features: [['📅','Attendance Calendar'],['💰','Fee Status & Receipts'],['📚','Homework Tracker'],['🔔','School Notices & Alerts']],
-    btnCls: 'from-green-700 to-green-500 text-white',
-    accentBg: 'rgba(34,197,94,0.12)', accentBorder: 'rgba(34,197,94,0.3)',
+    title: 'Student Portal',
+    desc: 'Access your academic dashboard.',
+    email: 'aarav@student.gnpss.edu.in',
+    pass: 'Student@1234',
+    color: '#34D399',
+    features: [
+      ['📅','Attendance'],
+      ['💰','Fees'],
+      ['📚','Homework'],
+      ['🔔','Notices'],
+    ],
   },
 };
 
 function LoginInner() {
   const router = useRouter();
   const params = useSearchParams();
-  const rp     = (params.get('role') || 'admin') as RoleId;
 
-  const [role,    setRoleState] = useState<RoleId>(rp);
-  const [email,   setEmail]     = useState('');
-  const [pass,    setPass]      = useState('');
-  const [loading, setLoading]   = useState(false);
-  const [error,   setError]     = useState('');
+  const roleParam = (params.get('role') || 'admin') as RoleId;
+  const [role, setRole] = useState<RoleId>('admin');
+  const [screen, setScreen] = useState<Screen>('login');
+
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [showPwd, setShowPwd] = useState(false);
+
+  const [forgotEmail, setForgotEmail] = useState('');
+  const [resetToken, setResetToken] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPwd, setConfirmPwd] = useState('');
+
+  const [devToken, setDevToken] = useState('');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+
   const m = META[role];
 
   useEffect(() => {
-    setRoleState(rp);
-    setEmail(META[rp]?.demoEmail || '');
-    setPass('');
-    setError('');
-  }, [rp]);
+    setRole(roleParam);
+    setEmail(META[roleParam].email);
+    setPassword('');
+  }, [roleParam]);
 
-  const submit = async (e: React.FormEvent) => {
+  const clear = () => setError('');
+
+  // LOGIN
+  const handleLogin = async (e: any) => {
     e.preventDefault();
-    setError(''); setLoading(true);
+    clear();
+    setLoading(true);
+
     try {
-      const res = await authApi.login(email, pass);
+      const res = await authApi.login(email, password);
       const { accessToken, user } = res.data;
+
       localStorage.setItem('sims_token', accessToken);
       localStorage.setItem('sims_user', JSON.stringify(user));
+
       router.push(getRoleRedirect(user.role));
-    } catch (err: any) {
-      setError(err?.message || 'Invalid credentials. Please check and try again.');
-    } finally { setLoading(false); }
+    } catch {
+      setError('Invalid credentials');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // FORGOT
+  const handleForgot = async (e: any) => {
+    e.preventDefault();
+    clear();
+    setLoading(true);
+
+    try {
+      const res = await authApi.forgotPassword(forgotEmail);
+      if (res.data.resetToken) setDevToken(res.data.resetToken);
+      setScreen('reset');
+    } catch {
+      setError('Failed to send code');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // RESET
+  const handleReset = async (e: any) => {
+    e.preventDefault();
+    clear();
+
+    if (newPassword !== confirmPwd) {
+      setError('Passwords do not match');
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      await authApi.resetPassword(resetToken, newPassword);
+      setScreen('done');
+    } catch {
+      setError('Invalid or expired code');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-8"
-         style={{background:'linear-gradient(160deg,#0A1628 0%,#0F2044 50%,#0A1628 100%)'}}>
-      <div className="fixed inset-0 pointer-events-none"
-           style={{backgroundImage:'linear-gradient(rgba(255,255,255,.025) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.025) 1px,transparent 1px)',backgroundSize:'60px 60px'}}/>
+    <div className="min-h-screen flex flex-col lg:flex-row bg-[#0A1628]">
 
-      <div className="relative z-10 w-full max-w-4xl rounded-3xl overflow-hidden shadow-2xl"
-           style={{border:'1px solid rgba(255,255,255,0.1)',animation:'fadeUp 0.4s ease both'}}>
-        <div className="flex min-h-[560px]">
+      {/* LEFT PANEL */}
+      <div className="hidden lg:flex flex-1 flex-col justify-center px-16 py-12 bg-[#14284B] text-white">
 
-          {/* LEFT */}
-          <div className="flex-1 p-12 flex flex-col"
-               style={{background:'linear-gradient(160deg,#0F2044,#162952)',borderRight:'1px solid rgba(255,255,255,0.06)'}}>
-            {/* Logo */}
-            <div className="flex items-center gap-3 mb-10">
-              <div className="w-12 h-12 rounded-xl flex items-center justify-center text-2xl"
-                   style={{background:'linear-gradient(135deg,#D4A017,#F0C040)'}}>🎓</div>
-              <div className="text-lg font-black text-white">SIMS <span style={{color:'#F0C040'}}>Pro</span></div>
-            </div>
-            <div className="flex-1">
-              <h2 className="text-3xl font-extrabold mb-3 leading-tight text-white">
-                {m.title.split(' ').slice(0,-1).join(' ')}{' '}
-                <span style={{color:'#F0C040'}}>{m.title.split(' ').slice(-1)}</span>
-              </h2>
-              <p className="text-sm mb-8 leading-relaxed" style={{color:'rgba(255,255,255,0.5)'}}>{m.desc}</p>
-              <div className="space-y-3">
-                {m.features.map(([icon,label])=>(
-                  <div key={label} className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-lg flex items-center justify-center text-sm"
-                         style={{background:m.accentBg,border:`1px solid ${m.accentBorder}`}}>{icon}</div>
-                    <span className="text-sm" style={{color:'rgba(255,255,255,0.7)'}}>{label}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-            {/* Switch portal */}
-            <div>
-              <p className="text-xs font-bold uppercase tracking-wider mb-2" style={{color:'rgba(255,255,255,0.3)'}}>Switch portal</p>
-              <div className="flex gap-2 mb-5">
-                {(['admin','teacher','student'] as RoleId[]).map(r=>(
-                  <Link key={r} href={`/login?role=${r}`}
-                        className="flex-1 py-2 px-2 rounded-lg text-xs font-bold capitalize text-center transition-all"
-                        style={{
-                          background: r===role?'rgba(212,160,23,0.2)':'rgba(255,255,255,0.04)',
-                          border:`1px solid ${r===role?'rgba(212,160,23,0.4)':'rgba(255,255,255,0.08)'}`,
-                          color: r===role?'#F0C040':'rgba(255,255,255,0.4)',
-                        }}>
-                    {r}
-                  </Link>
-                ))}
-              </div>
-              <Link href="/" className="text-sm transition-colors hover:text-yellow-400" style={{color:'rgba(255,255,255,0.4)'}}>
-                ← Back to Portal Home
-              </Link>
-            </div>
+        {/* LOGO */}
+        <div className="flex items-center gap-3 mb-10">
+          <div className="w-12 h-12 bg-yellow-500 rounded-xl flex items-center justify-center text-xl">
+            🎓
           </div>
+          <div className="text-xl font-bold">
+            SIMS <span style={{ color: '#F0C040' }}>Pro</span>
+          </div>
+        </div>
 
-          {/* RIGHT */}
-          <div className="w-96 p-12 flex flex-col justify-center" style={{background:'#0A1628'}}>
-            <h3 className="text-2xl font-extrabold text-white mb-1">Welcome Back</h3>
-            <p className="text-sm mb-8" style={{color:'rgba(255,255,255,0.4)'}}>Sign in to access your portal</p>
+        {/* TITLE */}
+        <h1 className="text-4xl font-extrabold mb-4">
+          {m.title.split(' ')[0]}{' '}
+          <span style={{ color: '#F0C040' }}>
+            {m.title.split(' ')[1]}
+          </span>
+        </h1>
 
-            {error && (
-              <div className="mb-5 px-4 py-3 rounded-xl text-sm font-medium"
-                   style={{background:'rgba(239,68,68,0.12)',border:'1px solid rgba(239,68,68,0.3)',color:'#FCA5A5'}}>
-                ⚠️ {error}
-              </div>
-            )}
+        <p className="text-white/50 mb-10 max-w-md">
+          {m.desc}
+        </p>
 
-            <form onSubmit={submit} className="space-y-4">
-              <div>
-                <label className="block text-xs font-bold mb-2 uppercase tracking-wider" style={{color:'rgba(255,255,255,0.45)'}}>
-                  {m.idLabel}
-                </label>
-                <input type="email" value={email} onChange={e=>setEmail(e.target.value)}
-                       placeholder={m.placeholder} required autoComplete="email"
-                       className="sims-input"/>
+        {/* FEATURES */}
+        <div className="space-y-4">
+          {m.features.map(([icon, text]: any) => (
+            <div key={text} className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-white/10 flex items-center justify-center">
+                {icon}
               </div>
-              <div>
-                <label className="block text-xs font-bold mb-2 uppercase tracking-wider" style={{color:'rgba(255,255,255,0.45)'}}>
-                  PASSWORD
-                </label>
-                <input type="password" value={pass} onChange={e=>setPass(e.target.value)}
-                       placeholder="••••••••" required autoComplete="current-password"
-                       className="sims-input"/>
+              <span className="text-white/70">{text}</span>
+            </div>
+          ))}
+        </div>
+
+        {/* SWITCH */}
+        <div className="mt-10">
+          <p className="text-xs text-white/40 mb-2">SWITCH PORTAL</p>
+          <div className="flex gap-2">
+            {(['admin','teacher','student'] as RoleId[]).map(r => (
+              <Link
+                key={r}
+                href={`/login?role=${r}`}
+                className={`flex-1 py-2 text-center rounded-lg text-sm ${
+                  r === role
+                    ? 'bg-yellow-500 text-black'
+                    : 'bg-white/10 text-white/40'
+                }`}
+              >
+                {r}
+              </Link>
+            ))}
+          </div>
+        </div>
+
+        <Link href="/" className="mt-6 text-white/40 text-sm">
+          ← Back to Portal Home
+        </Link>
+      </div>
+
+      {/* RIGHT PANEL (UNCHANGED STYLE) */}
+      <div className="flex-1 flex items-center justify-center px-6 py-10">
+        <div className="w-full max-w-md">
+
+          {screen === 'login' && (
+            <form onSubmit={handleLogin}>
+              <h2 className="text-3xl font-bold text-white mb-2">
+                Welcome Back
+              </h2>
+              <p className="text-white/40 mb-6">
+                Sign in to access your portal
+              </p>
+
+              <input
+                className="w-full p-4 mb-4 rounded-xl bg-white/10 text-white"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="Email"
+              />
+
+              <div className="relative mb-4">
+                <input
+                  type={showPwd ? 'text' : 'password'}
+                  className="w-full p-4 rounded-xl bg-white/10 text-white"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Password"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPwd(!showPwd)}
+                  className="absolute right-4 top-4"
+                >
+                  {showPwd ? '🙈' : '👁️'}
+                </button>
               </div>
-              <div className="flex justify-end">
-                <button type="button" className="text-xs transition-colors hover:text-yellow-400" style={{color:'rgba(255,255,255,0.4)'}}>
+
+              <div className="text-right mb-4">
+                <button
+                  type="button"
+                  onClick={() => setScreen('forgot')}
+                  className="text-yellow-400 text-sm"
+                >
                   Forgot Password?
                 </button>
               </div>
-              <button type="submit" disabled={loading}
-                      className={`w-full py-3.5 rounded-xl text-sm font-black tracking-wide bg-gradient-to-r ${m.btnCls} transition-all hover:-translate-y-0.5 disabled:opacity-60 disabled:cursor-not-allowed`}>
-                {loading ? '⏳ Signing in...' : `Login to ${m.title.split(' ')[0]} Portal →`}
+
+              {error && (
+                <div className="bg-red-500/20 text-red-300 p-3 rounded-lg mb-4">
+                  ⚠️ {error}
+                </div>
+              )}
+
+              <button className="w-full py-4 rounded-xl bg-gradient-to-r from-yellow-500 to-yellow-400 text-black font-bold">
+                {loading ? 'Loading...' : '→ Login'}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setEmail(m.email);
+                  setPassword(m.pass);
+                }}
+                className="w-full mt-3 py-3 rounded-xl bg-white/10"
+              >
+                🔑 Use Demo Credentials
               </button>
             </form>
+          )}
 
-            <button onClick={()=>{setEmail(m.demoEmail);setPass(m.demoPass);}}
-                    className="mt-4 w-full py-2.5 rounded-xl text-xs font-semibold transition-all hover:bg-white/10 glass">
-              🔑 Use Demo Credentials
-            </button>
-            <p className="text-center text-xs mt-4" style={{color:'rgba(255,255,255,0.25)'}}>
-              Demo: <span className="text-white/50">{m.demoEmail}</span>
-              {' / '}<span className="text-white/50">{m.demoPass}</span>
-            </p>
-          </div>
+          {/* FORGOT */}
+          {screen === 'forgot' && (
+            <form onSubmit={handleForgot}>
+              <h2 className="text-xl text-white mb-4">Forgot Password</h2>
+
+              <input
+                className="w-full p-4 mb-4 rounded-xl bg-white/10 text-white"
+                value={forgotEmail}
+                onChange={(e) => setForgotEmail(e.target.value)}
+                placeholder="Email"
+              />
+
+              <button className="w-full py-4 bg-yellow-500 rounded-xl text-black">
+                Send Code
+              </button>
+            </form>
+          )}
+
+          {/* RESET */}
+          {screen === 'reset' && (
+            <form onSubmit={handleReset}>
+              <h2 className="text-xl text-white mb-4">Reset Password</h2>
+
+              {devToken && (
+                <div className="text-green-400 mb-3 text-center">
+                  {devToken}
+                </div>
+              )}
+
+              <input
+                className="w-full p-4 mb-3 rounded-xl bg-white/10 text-white text-center tracking-widest"
+                value={resetToken}
+                onChange={(e) => setResetToken(e.target.value)}
+                placeholder="Code"
+              />
+
+              <input
+                className="w-full p-4 mb-3 rounded-xl bg-white/10 text-white"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                placeholder="New Password"
+              />
+
+              <input
+                className="w-full p-4 mb-3 rounded-xl bg-white/10 text-white"
+                value={confirmPwd}
+                onChange={(e) => setConfirmPwd(e.target.value)}
+                placeholder="Confirm Password"
+              />
+
+              {error && (
+                <div className="text-red-400 mb-3">{error}</div>
+              )}
+
+              <button className="w-full py-4 bg-green-500 rounded-xl">
+                Reset Password
+              </button>
+            </form>
+          )}
+
+          {/* DONE */}
+          {screen === 'done' && (
+            <div className="text-center text-white">
+              <h2>Password Updated</h2>
+              <button
+                onClick={() => setScreen('login')}
+                className="mt-4 px-6 py-3 bg-yellow-500 rounded-xl text-black"
+              >
+                Back to Login
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </div>
@@ -189,12 +357,8 @@ function LoginInner() {
 
 export default function LoginPage() {
   return (
-    <Suspense fallback={
-      <div className="min-h-screen flex items-center justify-center" style={{background:'#0A1628'}}>
-        <div className="text-white/30 text-sm">Loading...</div>
-      </div>
-    }>
-      <LoginInner/>
+    <Suspense fallback={<div className="text-white p-6">Loading...</div>}>
+      <LoginInner />
     </Suspense>
   );
 }

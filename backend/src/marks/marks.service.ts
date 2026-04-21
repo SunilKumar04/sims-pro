@@ -1,6 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { ExamType } from '@prisma/client';
 
 function calcGrade(marks: number, max: number): string {
   const p = (marks / max) * 100;
@@ -42,7 +41,7 @@ export class MarksService {
             studentId_subject_examType_year: {
               studentId: rec.studentId,
               subject:   rec.subject,
-              examType:  dto.examType as ExamType,
+              examType:  dto.examType as any,
               year,
             },
           },
@@ -50,7 +49,7 @@ export class MarksService {
           create: {
             studentId: rec.studentId,
             subject:   rec.subject,
-            examType:  dto.examType as ExamType,
+            examType:  dto.examType as any,
             marks:     rec.marks,
             maxMarks:  rec.maxMarks || 100,
             grade,
@@ -68,7 +67,7 @@ export class MarksService {
   async getByClass(className: string, examType: string, year?: number) {
     const y = year || new Date().getFullYear();
     const marks = await this.prisma.mark.findMany({
-      where: { className, examType: examType as ExamType, year: y },
+      where: { className, examType: examType as any, year: y },
       include: { student: { include: { user: { select: { name: true } } } } },
       orderBy: { student: { roll: 'asc' } },
     });
@@ -101,7 +100,7 @@ export class MarksService {
 
     const y = year || new Date().getFullYear();
     const marks = await this.prisma.mark.findMany({
-      where: { studentId, examType: examType as ExamType, year: y },
+      where: { studentId, examType: examType as any, year: y },
       orderBy: { subject: 'asc' },
     });
 

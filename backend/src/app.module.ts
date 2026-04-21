@@ -1,3 +1,4 @@
+// src/app.module.ts
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { ThrottlerModule } from '@nestjs/throttler';
@@ -10,8 +11,12 @@ import { FeesModule } from './fees/fees.module';
 import { NoticesModule } from './notices/notices.module';
 import { HomeworkModule } from './homework/homework.module';
 import { AttendanceModule } from './attendance/attendance.module';
-import { MarksModule } from './marks/marks.module';
 import { DashboardModule } from './dashboard/dashboard.module';
+import { MarksModule } from './marks/marks.module';
+import { TimetableModule } from './timetable/timetable.module';
+import { SessionsModule } from './sessions/sessions.module';
+import { ExamsModule } from './exams/exams.module';
+import { AssignmentsModule } from './assignments/assignments.module';
 
 @Module({
   imports: [
@@ -26,8 +31,13 @@ import { DashboardModule } from './dashboard/dashboard.module';
     NoticesModule,
     HomeworkModule,
     AttendanceModule,
-    MarksModule,       // ← NEW
     DashboardModule,
+    // ── New modules ──
+    MarksModule,
+    TimetableModule,
+    SessionsModule,
+    ExamsModule,
+    AssignmentsModule,
   ],
 })
 export class AppModule {}

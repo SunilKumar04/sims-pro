@@ -6,10 +6,13 @@ import {
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcryptjs';
+import * as crypto from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
+import { ForgotPasswordDto } from './dto/forgot-password.dto';
+import { ResetPasswordDto } from './dto/reset-password.dto';
 import { Role } from '@prisma/client';
 
 @Injectable()
@@ -34,56 +37,30 @@ export class AuthService {
       where: { email: dto.email },
       include: { student: true, teacher: true },
     });
-
     if (!user || !user.isActive) throw new UnauthorizedException('Invalid credentials');
     const match = await bcrypt.compare(dto.password, user.password);
     if (!match) throw new UnauthorizedException('Invalid credentials');
 
-    await this.prisma.user.update({
-      where: { id: user.id },
-      data: { lastLogin: new Date() },
-    });
+    await this.prisma.user.update({ where: { id: user.id }, data: { lastLogin: new Date() } });
 
-    // ── Build JWT payload with related entity IDs ──
-    const payload: any = {
-      sub:   user.id,
-      email: user.email,
-      role:  user.role,
-      name:  user.name,
+    let profile: Record<string, any> = {
+      id: user.id, name: user.name, email: user.email, role: user.role,
     };
     if (user.role === Role.STUDENT && user.student) {
-      payload.studentId = user.student.id;
-      payload.className = user.student.className;
-      payload.roll      = user.student.roll;
+      profile = { ...profile, studentId: user.student.id, className: user.student.className, roll: user.student.roll, parentName: user.student.parentName, phone: user.student.phone };
+    } else if ((user.role === Role.TEACHER || user.role === Role.ADMIN) && user.teacher) {
+      profile = { ...profile, teacherId: user.teacher.id, employeeCode: user.teacher.employeeCode, subject: user.teacher.subject, assignedClasses: user.teacher.assignedClasses };
     }
-    if (user.role === Role.TEACHER && user.teacher) {
-      payload.teacherId = user.teacher.id;
-      payload.subject   = user.teacher.subject;
-    }
+
+    const payload = {
+      sub: user.id, email: user.email, role: user.role, name: user.name,
+      studentId: user.student?.id ?? undefined,
+      teacherId: user.teacher?.id ?? undefined,
+      className: user.student?.className ?? undefined,
+      roll:      user.student?.roll ?? undefined,
+    };
 
     const accessToken = this.jwt.sign(payload);
-
-    // ── Build user profile ──
-    const profile: any = {
-      id:    user.id,
-      name:  user.name,
-      email: user.email,
-      role:  user.role,
-    };
-    if (user.student) {
-      profile.studentId  = user.student.id;
-      profile.className  = user.student.className;
-      profile.roll       = user.student.roll;
-      profile.parentName = user.student.parentName;
-      profile.phone      = user.student.phone;
-    }
-    if (user.teacher) {
-      profile.teacherId       = user.teacher.id;
-      profile.subject         = user.teacher.subject;
-      profile.employeeCode    = user.teacher.employeeCode;
-      profile.assignedClasses = user.teacher.assignedClasses;
-    }
-
     return { success: true, message: 'Login successful', accessToken, user: profile };
   }
 
@@ -104,8 +81,15 @@ export class AuthService {
       include: { student: true, teacher: true },
     });
     if (!user) throw new NotFoundException('User not found');
-    const { password: _, refreshToken: __, ...result } = user;
-    return result;
+    const { password: _, refreshToken: __, resetToken: ___, resetTokenExpiry: ____, ...rest } = user;
+
+    let profile: Record<string, any> = { id: rest.id, name: rest.name, email: rest.email, role: rest.role };
+    if (user.role === Role.STUDENT && user.student) {
+      profile = { ...profile, studentId: user.student.id, className: user.student.className, roll: user.student.roll };
+    } else if (user.teacher) {
+      profile = { ...profile, teacherId: user.teacher.id, employeeCode: user.teacher.employeeCode };
+    }
+    return profile;
   }
 
   async changePassword(userId: string, dto: ChangePasswordDto) {
@@ -114,7 +98,66 @@ export class AuthService {
     const match = await bcrypt.compare(dto.currentPassword, user.password);
     if (!match) throw new BadRequestException('Current password is incorrect');
     const hashed = await bcrypt.hash(dto.newPassword, 10);
-    await this.prisma.user.update({ where: { id: userId }, data: { password: hashed } });
+    await this.prisma.user.update({ where: { id: user.id }, data: { password: hashed } });
     return { success: true, message: 'Password changed successfully' };
+  }
+
+  // ── Forgot Password ───────────────────────────────────────────
+  // Generates a 6-digit OTP-style reset token valid for 15 minutes.
+  // In a real deployment wire this to an email service.
+  // For now it returns the token in the response (dev mode) and logs it.
+  async forgotPassword(dto: ForgotPasswordDto) {
+    const user = await this.prisma.user.findUnique({ where: { email: dto.email } });
+
+    // Always return success — never leak whether email exists
+    if (!user || !user.isActive) {
+      return {
+        success: true,
+        message: 'If that email is registered, a reset code has been sent.',
+      };
+    }
+
+    // Generate 6-digit code
+    const token  = crypto.randomInt(100000, 999999).toString();
+    const expiry = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
+
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data:  { resetToken: token, resetTokenExpiry: expiry },
+    });
+
+    // ── TODO: replace this with a real email service ──
+    // e.g. await this.mailerService.sendMail({ to: user.email, subject: 'Reset Code', text: `Your code: ${token}` });
+    console.log(`\n🔑 RESET CODE for ${user.email}: ${token} (valid 15 min)\n`);
+
+    return {
+      success: true,
+      message: 'Reset code generated. Check server logs (or email if configured).',
+      // Remove `resetToken` from response in production!
+      resetToken: process.env.NODE_ENV !== 'production' ? token : undefined,
+    };
+  }
+
+  // ── Reset Password with token ─────────────────────────────────
+  async resetPassword(dto: ResetPasswordDto) {
+    const user = await this.prisma.user.findFirst({
+      where: { resetToken: dto.token },
+    });
+
+    if (!user) throw new BadRequestException('Invalid or expired reset code');
+
+    if (!user.resetTokenExpiry || user.resetTokenExpiry < new Date()) {
+      // Clear expired token
+      await this.prisma.user.update({ where: { id: user.id }, data: { resetToken: null, resetTokenExpiry: null } });
+      throw new BadRequestException('Reset code has expired. Please request a new one.');
+    }
+
+    const hashed = await bcrypt.hash(dto.newPassword, 10);
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data:  { password: hashed, resetToken: null, resetTokenExpiry: null },
+    });
+
+    return { success: true, message: 'Password reset successfully. You can now log in.' };
   }
 }

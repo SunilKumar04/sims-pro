@@ -35,7 +35,7 @@ export default function StudentNotices() {
     <AppShell title="Notices & Alerts" subtitle="School announcements for students & parents">
 
       {/* STATS */}
-      <div className="grid grid-cols-3 gap-4 mb-5">
+      <div className="grid grid-cols-1 gap-4 mb-5 md:grid-cols-3">
         {[
           {icon:'📢', label:'Total Notices',    value:stats.total, col:'#F0C040', bg:'rgba(212,160,23,0.1)',  bd:'rgba(212,160,23,0.2)'},
           {icon:'🔴', label:'High Priority',    value:stats.high,  col:'#FCA5A5', bg:'rgba(239,68,68,0.1)',   bd:'rgba(239,68,68,0.2)' },

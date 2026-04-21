@@ -42,17 +42,12 @@ api.interceptors.response.use(
 // AUTH
 // ══════════════════════════════════════
 export const authApi = {
-  login: (email: string, password: string) =>
-    api.post('/auth/login', { email, password }),
-
-  register: (data: any) =>
-    api.post('/auth/register', data),
-
-  getMe: () =>
-    api.get('/auth/me'),
-
-  changePassword: (data: any) =>
-    api.patch('/auth/change-password', data),
+  login:          (email: string, password: string) => api.post('/auth/login', { email, password }),
+  register:       (data: any)                        => api.post('/auth/register', data),
+  getMe:          ()                                 => api.get('/auth/me'),
+  changePassword: (data: any)                        => api.patch('/auth/change-password', data),
+  forgotPassword: (email: string)                    => api.post('/auth/forgot-password', { email }),
+  resetPassword:  (token: string, newPassword: string) => api.post('/auth/reset-password', { token, newPassword }),
 };
 
 // ══════════════════════════════════════
@@ -122,23 +117,13 @@ export const classesApi = {
 // FEES
 // ══════════════════════════════════════
 export const feesApi = {
-  getAll: (params?: any) =>
-    api.get('/fees', { params }),
-
-  getByStudent: (studentId: string) =>
-    api.get(`/fees/student/${studentId}`),
-
-  create: (data: any) =>
-    api.post('/fees', data),
-
-  markPaid: (id: string) =>
-    api.patch(`/fees/${id}/mark-paid`),
-
-  updatePayment: (id: string, data: any) =>
-    api.patch(`/fees/${id}/payment`, data),
-
-  getMonthlyStats: () =>
-    api.get('/fees/monthly-stats'),
+  getAll:            (params?: any)              => api.get('/fees', { params }),
+  getByStudent:      (studentId: string)          => api.get(`/fees/student/${studentId}`),
+  create:            (data: any)                  => api.post('/fees', data),
+  markPaid:          (id: string)                 => api.patch(`/fees/${id}/mark-paid`),
+  updatePayment:     (id: string, data: any)      => api.patch(`/fees/${id}/payment`, data),
+  getMonthlyStats:   ()                           => api.get('/fees/monthly-stats'),
+  bulkCreateForTerm: (term: string, className?: string) => api.post('/fees/bulk-create-term', { term, className }),
 };
 
 // ══════════════════════════════════════
@@ -218,18 +203,72 @@ export default api;
 // MARKS
 // ══════════════════════════════════════
 export const marksApi = {
-  bulkSave: (data: any) =>
-    api.post('/marks/bulk', data),
+  bulkSave:         (data: any)                                  => api.post('/marks/bulk', data),
+  getByClass:       (className: string, examType: string, year?: number) => api.get(`/marks/class/${className}`, { params: { examType, year } }),
+  getByStudent:     (studentId: string)                          => api.get(`/marks/student/${studentId}`),
+  getStudentReport: (studentId: string, examType: string, year?: number) => api.get(`/marks/student/${studentId}/report`, { params: { examType, year } }),
+  getMyReport:      (examType?: string, year?: number)           => api.get('/marks/me/report', { params: { examType, year } }),
+};
 
-  getByClass: (className: string, examType: string, year?: number) =>
-    api.get(`/marks/class/${className}`, { params: { examType, year } }),
+// ══════════════════════════════════════
+// TIMETABLE
+// ══════════════════════════════════════
+export const timetableApi = {
+  createMapping:    (data: any)             => api.post('/timetable/mapping', data),
+  getMappings:      (className?: string)    => api.get('/timetable/mapping', { params: { className } }),
+  deleteMapping:    (id: string)            => api.delete(`/timetable/mapping/${id}`),
+  upsertSlot:       (data: any)             => api.post('/timetable/slot', data),
+  getClassTimetable:(className: string)     => api.get(`/timetable/class/${className}`),
+  getMyTimetable:   ()                      => api.get('/timetable/teacher/me'),
+  deleteSlot:       (id: string)            => api.delete(`/timetable/slot/${id}`),
+};
 
-  getByStudent: (studentId: string) =>
-    api.get(`/marks/student/${studentId}`),
+// ══════════════════════════════════════
+// SESSIONS (subject-wise attendance)
+// ══════════════════════════════════════
+export const sessionsApi = {
+  create:              (data: any)                       => api.post('/sessions', data),
+  markBulk:            (id: string, records: any[])      => api.post(`/sessions/${id}/mark`, { records }),
+  lock:                (id: string)                      => api.patch(`/sessions/${id}/lock`),
+  getToday:            ()                                => api.get('/sessions/today'),
+  getSession:          (id: string)                      => api.get(`/sessions/${id}`),
+  getSessionStudents:  (id: string)                      => api.get(`/sessions/${id}/students`),
+  getSessions:         (params?: any)                    => api.get('/sessions', { params }),
+  getStudentToday:     ()                                => api.get('/sessions/student/today'),
+  getMyStudentSummary: (className?: string)              => api.get('/sessions/student/summary', { params: { className } }),
+  getStudentSummary:   (studentId: string, cls?: string) => api.get(`/sessions/student/${studentId}/summary`, { params: { className: cls } }),
+};
 
-  getStudentReport: (studentId: string, examType: string, year?: number) =>
-    api.get(`/marks/student/${studentId}/report`, { params: { examType, year } }),
+// ══════════════════════════════════════
+// EXAMS & DATE SHEET
+// ══════════════════════════════════════
+export const examsApi = {
+  getMyDuties:         ()                                   => api.get('/exams/my-duties'),
+  create:         (data: any)              => api.post('/exams', data),
+  update:         (id: string, data: any)  => api.patch(`/exams/${id}`, data),
+  delete:         (id: string)             => api.delete(`/exams/${id}`),
+  getAll:         (params?: any)           => api.get('/exams', { params }),
+  getByClass:     (className: string)      => api.get(`/exams/class/${className}`),
+  getDatesheet:   (className: string, examType: string) => api.get(`/exams/class/${className}/datesheet`, { params: { examType } }),
+  addEntry:       (examId: string, data: any)      => api.post(`/exams/${examId}/entries`, data),
+  addBulkEntries: (examId: string, entries: any[]) => api.post(`/exams/${examId}/entries/bulk`, { entries }),
+  deleteEntry:    (entryId: string)        => api.delete(`/exams/entries/${entryId}`),
+  publish:             (id: string, pub = true) => api.patch(`/exams/${id}/publish`, { publish: pub }),
+  getExamsByDate:      (date?: string)           => api.get('/exams/today', { params: date ? { date } : {} }),
+  assignInvigilator:   (entryId: string, data: { teacherId: string; role?: string }) => api.post(`/exams/entries/${entryId}/invigilators`, data),
+  removeInvigilator:   (invId: string)            => api.delete(`/exams/invigilators/${invId}`),
+};
 
-  getMyReport: (examType?: string, year?: number) =>
-    api.get('/marks/me/report', { params: { examType, year } }),
+// ══════════════════════════════════════
+// ASSIGNMENTS
+// ══════════════════════════════════════
+export const assignmentsApi = {
+  create:                (data: any)            => api.post('/assignments', data),
+  getAll:                (params?: any)          => api.get('/assignments', { params }),
+  getOne:                (id: string)            => api.get(`/assignments/${id}`),
+  update:                (id: string, data: any) => api.patch(`/assignments/${id}`, data),
+  delete:                (id: string)            => api.delete(`/assignments/${id}`),
+  getStudentAssignments: (className: string)     => api.get('/assignments/student', { params: { className } }),
+  submit:                (id: string, data: any) => api.post(`/assignments/${id}/submit`, data),
+  grade:                 (subId: string, data: any) => api.patch(`/assignments/submissions/${subId}/grade`, data),
 };

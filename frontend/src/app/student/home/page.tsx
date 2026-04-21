@@ -40,55 +40,48 @@ export default function StudentHome() {
   const feeColor = feeColors[feeStatus] || '#FCA5A5';
 
   const upcomingHw = hw.filter(h => new Date(h.dueDate) >= new Date()).slice(0, 4);
+  const quickActions = [
+    { icon:'📅', label:'My Attendance', href:'/student/attendance', val:`${attendPct}%`, col:attendColor, bg:`${attendColor}18`, bd:`${attendColor}35` },
+    { icon:'💰', label:'Fee Status', href:'/student/fees', val:feeStatus, col:feeColor, bg:`${feeColor}18`, bd:`${feeColor}35` },
+    { icon:'📚', label:'Homework', href:'/student/homework', val:`${upcomingHw.length} pending`, col:'#93C5FD', bg:'rgba(30,144,255,0.12)', bd:'rgba(30,144,255,0.3)' },
+    { icon:'🔔', label:'Notices', href:'/student/notices', val:`${notices.length} new`, col:'#F0C040', bg:'rgba(212,160,23,0.12)', bd:'rgba(212,160,23,0.3)' },
+  ];
 
   return (
     <AppShell title="My Dashboard" subtitle="Today's overview">
 
       {/* GREETING BANNER */}
-      <div className="rounded-2xl p-7 mb-6 relative overflow-hidden"
+      <div className="rounded-[1.75rem] p-5 mb-6 relative overflow-hidden sm:p-7"
            style={{background:'linear-gradient(135deg,#0F2044,#162952)',border:'1px solid rgba(212,160,23,0.25)'}}>
         <div className="relative z-10">
-          <div className="text-2xl font-black mb-1">{greet}, {firstName}! 👋</div>
-          <p className="text-sm mb-5" style={{color:'rgba(255,255,255,0.5)'}}>
+          <div className="text-xl font-black mb-1 sm:text-2xl">{greet}, {firstName}! 👋</div>
+          <p className="text-xs mb-5 sm:text-sm" style={{color:'rgba(255,255,255,0.5)'}}>
             {now.toLocaleDateString('en-IN',{weekday:'long',day:'2-digit',month:'long',year:'numeric'})}
             {user?.className && ` · Class ${user.className}`}
             {user?.roll && ` · Roll: ${user.roll}`}
           </p>
-          <div className="flex gap-8">
-            <div>
-              <div className="text-3xl font-black" style={{color:attendColor}}>{attendPct}%</div>
-              <div className="text-xs mt-0.5" style={{color:'rgba(255,255,255,0.4)'}}>Attendance</div>
-            </div>
-            <div className="w-px" style={{background:'rgba(255,255,255,0.1)'}}/>
-            <div>
-              <div className="text-3xl font-black text-white">{stats?.attendance?.present ?? 18}</div>
-              <div className="text-xs mt-0.5" style={{color:'rgba(255,255,255,0.4)'}}>Days Present</div>
-            </div>
-            <div className="w-px" style={{background:'rgba(255,255,255,0.1)'}}/>
-            <div>
-              <div className="text-3xl font-black" style={{color:'#FCA5A5'}}>{stats?.attendance?.absent ?? 2}</div>
-              <div className="text-xs mt-0.5" style={{color:'rgba(255,255,255,0.4)'}}>Days Absent</div>
-            </div>
-            <div className="w-px" style={{background:'rgba(255,255,255,0.1)'}}/>
-            <div>
-              <div className="text-3xl font-black" style={{color:'#93C5FD'}}>{upcomingHw.length}</div>
-              <div className="text-xs mt-0.5" style={{color:'rgba(255,255,255,0.4)'}}>Homework Due</div>
-            </div>
+          <div className="grid grid-cols-2 gap-3 sm:flex sm:flex-wrap sm:gap-8">
+            {[
+              { value:`${attendPct}%`, label:'Attendance', color:attendColor },
+              { value:stats?.attendance?.present ?? 18, label:'Days Present', color:'#FFFFFF' },
+              { value:stats?.attendance?.absent ?? 2, label:'Days Absent', color:'#FCA5A5' },
+              { value:upcomingHw.length, label:'Homework Due', color:'#93C5FD' },
+            ].map(item => (
+              <div key={item.label} className="rounded-2xl px-3 py-3 sm:bg-transparent sm:px-0 sm:py-0" style={{background:'rgba(255,255,255,0.05)'}}>
+                <div className="text-2xl font-black sm:text-3xl" style={{color:item.color}}>{item.value}</div>
+                <div className="text-[11px] mt-0.5 sm:text-xs" style={{color:'rgba(255,255,255,0.4)'}}>{item.label}</div>
+              </div>
+            ))}
           </div>
         </div>
-        <div className="absolute right-8 top-6 text-7xl opacity-[0.06]">🎓</div>
+        <div className="absolute right-4 top-4 text-6xl opacity-[0.06] sm:right-8 sm:top-6 sm:text-7xl">🎓</div>
       </div>
 
       {/* QUICK ACTION CARDS */}
-      <div className="grid grid-cols-4 gap-4 mb-6">
-        {[
-          { icon:'📅', label:'My Attendance', href:'/student/attendance', val:`${attendPct}%`,       col:attendColor,                 bg:`${attendColor}18`, bd:`${attendColor}35` },
-          { icon:'💰', label:'Fee Status',    href:'/student/fees',       val:feeStatus,              col:feeColor,                    bg:`${feeColor}18`,    bd:`${feeColor}35`    },
-          { icon:'📚', label:'Homework',      href:'/student/homework',   val:`${upcomingHw.length} pending`, col:'#93C5FD',            bg:'rgba(30,144,255,0.12)', bd:'rgba(30,144,255,0.3)' },
-          { icon:'🔔', label:'Notices',       href:'/student/notices',    val:`${notices.length} new`,col:'#F0C040',                   bg:'rgba(212,160,23,0.12)', bd:'rgba(212,160,23,0.3)' },
-        ].map(c=>(
+      <div className="sims-mobile-scroll mb-6 sm:grid sm:grid-cols-2 sm:gap-4 sm:overflow-visible xl:grid-cols-4">
+        {quickActions.map(c=>(
           <Link key={c.label} href={c.href}
-                className="glass rounded-2xl p-5 hover:-translate-y-1 transition-all duration-200 hover:shadow-xl cursor-pointer"
+                className="glass sims-stat-card min-w-[15rem] rounded-2xl p-5 hover:-translate-y-1 transition-all duration-200 hover:shadow-xl cursor-pointer sm:min-w-0"
                 style={{border:`1px solid ${c.bd}`}}>
             <div className="w-10 h-10 rounded-xl flex items-center justify-center text-xl mb-3"
                  style={{background:c.bg,border:`1px solid ${c.bd}`}}>{c.icon}</div>
@@ -98,7 +91,7 @@ export default function StudentHome() {
         ))}
       </div>
 
-      <div className="grid grid-cols-2 gap-6 mb-6">
+      <div className="grid grid-cols-1 gap-6 mb-6 xl:grid-cols-2">
         {/* ATTENDANCE BAR */}
         <div className="glass rounded-2xl p-6">
           <h3 className="text-sm font-bold text-white mb-4">📊 This Month's Attendance</h3>
@@ -129,7 +122,7 @@ export default function StudentHome() {
         {/* FEE STATUS CARD */}
         <div className="glass rounded-2xl p-6">
           <h3 className="text-sm font-bold text-white mb-4">💰 Fee Status</h3>
-          <div className="flex items-center gap-4 mb-4">
+          <div className="flex items-start gap-4 mb-4">
             <div className="w-14 h-14 rounded-2xl flex items-center justify-center text-2xl flex-shrink-0"
                  style={{background:`${feeColor}18`,border:`1px solid ${feeColor}35`}}>
               {feeStatus==='PAID'?'✅':feeStatus==='PARTIAL'?'⚠️':'❌'}
@@ -157,7 +150,7 @@ export default function StudentHome() {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
         {/* UPCOMING HOMEWORK */}
         <div className="glass rounded-2xl p-6">
           <div className="flex items-center justify-between mb-4">

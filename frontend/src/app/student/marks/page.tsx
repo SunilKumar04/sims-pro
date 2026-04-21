@@ -83,7 +83,7 @@ export default function StudentMarks() {
 
           {/* REPORT CARD HEADER */}
           <div className="glass rounded-2xl p-6 mb-6" style={{border:'1px solid rgba(212,160,23,0.2)'}}>
-            <div className="flex items-center justify-between flex-wrap gap-4">
+            <div className="flex items-start justify-between flex-wrap gap-4">
               <div>
                 <div className="text-xs font-bold uppercase tracking-wider mb-1" style={{color:'rgba(255,255,255,0.4)'}}>
                   Report Card — {EXAM_MAP[examType]||examType}
@@ -93,20 +93,20 @@ export default function StudentMarks() {
                   Class {user?.className} {user?.roll && `· Roll: ${user.roll}`}
                 </div>
               </div>
-              <div className="flex gap-8">
-                <div className="text-center">
+              <div className="grid grid-cols-2 gap-4 sm:flex sm:flex-wrap sm:gap-8">
+                <div className="rounded-2xl bg-white/5 px-4 py-3 text-center sm:bg-transparent sm:px-0 sm:py-0">
                   <div className="text-4xl font-black" style={{color:gs.col}}>{overallGrade}</div>
                   <div className="text-xs mt-1" style={{color:'rgba(255,255,255,0.4)'}}>Overall Grade</div>
                 </div>
-                <div className="text-center">
+                <div className="rounded-2xl bg-white/5 px-4 py-3 text-center sm:bg-transparent sm:px-0 sm:py-0">
                   <div className="text-3xl font-black text-white">{pct}%</div>
                   <div className="text-xs mt-1" style={{color:'rgba(255,255,255,0.4)'}}>Percentage</div>
                 </div>
-                <div className="text-center">
+                <div className="rounded-2xl bg-white/5 px-4 py-3 text-center sm:bg-transparent sm:px-0 sm:py-0">
                   <div className="text-3xl font-black text-white">{total}<span className="text-base text-white/40">/{maxTotal}</span></div>
                   <div className="text-xs mt-1" style={{color:'rgba(255,255,255,0.4)'}}>Total Marks</div>
                 </div>
-                <div className="flex items-center">
+                <div className="flex items-center justify-center sm:justify-start">
                   <span className="px-4 py-2 rounded-xl text-sm font-black"
                         style={{
                           background: passAll?'rgba(34,197,94,0.15)':'rgba(239,68,68,0.15)',
@@ -125,7 +125,32 @@ export default function StudentMarks() {
             <div className="px-6 py-4" style={{borderBottom:'1px solid rgba(255,255,255,0.07)'}}>
               <h3 className="text-sm font-bold text-white">Subject-wise Results</h3>
             </div>
-            <div className="overflow-x-auto">
+            <div className="space-y-3 p-4 md:hidden">
+              {currentMarks.map(m => {
+                const p = Math.round((m.marks/m.maxMarks)*100);
+                const g = gradeStyle(m.grade||'C');
+                const pass = p>=40;
+                return (
+                  <div key={m.id || m.subject} className="rounded-2xl p-4" style={{background:'rgba(255,255,255,0.03)',border:'1px solid rgba(255,255,255,0.06)'}}>
+                    <div className="flex items-start justify-between gap-3 mb-3">
+                      <div>
+                        <div className="text-sm font-bold text-white">{m.subject}</div>
+                        <div className="text-xs mt-1" style={{color:'rgba(255,255,255,0.4)'}}>{m.marks}/{m.maxMarks} marks</div>
+                      </div>
+                      <span className="px-2.5 py-1 rounded-full text-xs font-black" style={{background:g.bg,color:g.col}}>{m.grade}</span>
+                    </div>
+                    <div className="w-full h-2 rounded-full overflow-hidden" style={{background:'rgba(255,255,255,0.07)'}}>
+                      <div className="h-full rounded-full" style={{width:`${p}%`,background:g.col}}/>
+                    </div>
+                    <div className="mt-3 flex items-center justify-between text-xs">
+                      <span className="font-bold" style={{color:g.col}}>{p}%</span>
+                      <span className="px-2.5 py-1 rounded-full font-bold" style={{background:pass?'rgba(34,197,94,0.12)':'rgba(239,68,68,0.12)',color:pass?'#86EFAC':'#FCA5A5'}}>{pass?'Pass':'Fail'}</span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            <div className="hidden overflow-x-auto md:block">
               <table className="sims-table">
                 <thead>
                   <tr><th>Subject</th><th>Marks</th><th>Max</th><th>%</th><th>Grade</th><th>Status</th></tr>
@@ -167,7 +192,26 @@ export default function StudentMarks() {
           {examTypes.length > 1 && (
             <div className="glass rounded-2xl p-6">
               <h3 className="text-sm font-bold text-white mb-4">📊 All Exams Comparison</h3>
-              <div className="overflow-x-auto">
+              <div className="space-y-3 md:hidden">
+                {[...new Set(Object.values(grouped).flat().map((m:any)=>m.subject))].map(sub => (
+                  <div key={sub as string} className="rounded-2xl p-4" style={{background:'rgba(255,255,255,0.03)',border:'1px solid rgba(255,255,255,0.06)'}}>
+                    <div className="text-sm font-bold text-white mb-3">{sub as string}</div>
+                    <div className="space-y-2">
+                      {examTypes.map(e => {
+                        const m = (grouped[e]||[]).find((x:any)=>x.subject===sub);
+                        const g = m ? gradeStyle(m.grade||'C') : null;
+                        return (
+                          <div key={e} className="flex items-center justify-between text-xs">
+                            <span style={{color:'rgba(255,255,255,0.45)'}}>{EXAM_MAP[e]||e}</span>
+                            <span className="font-bold" style={{color:g?.col||'rgba(255,255,255,0.2)'}}>{m ? `${m.marks}/${m.maxMarks}` : '—'}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div className="hidden overflow-x-auto md:block">
                 <table className="sims-table">
                   <thead>
                     <tr>

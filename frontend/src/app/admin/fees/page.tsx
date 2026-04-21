@@ -49,7 +49,7 @@ export default function AdminFees() {
     <AppShell title="Fee Management" subtitle="Track and manage fee payments">
 
       {/* STAT CARDS */}
-      <div className="grid grid-cols-4 gap-5 mb-6">
+      <div className="grid grid-cols-1 gap-5 mb-6 sm:grid-cols-2 xl:grid-cols-4">
         {statCards.map(c => (
           <div key={c.label} className="glass rounded-2xl p-5">
             <div className="text-2xl mb-2">{c.icon}</div>
@@ -60,24 +60,24 @@ export default function AdminFees() {
       </div>
 
       {/* FILTER */}
-      <div className="glass rounded-2xl p-5 mb-5 flex items-center justify-between">
-        <div className="flex gap-2">
+      <div className="glass rounded-2xl p-4 sm:p-5 mb-5 flex flex-col items-stretch gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="sims-chip-row overflow-x-auto pb-1 sm:overflow-visible">
           {['', 'PAID', 'PENDING', 'PARTIAL'].map(s => (
             <button key={s} onClick={() => setFilter(s)}
-                    className={cn('px-4 py-2 rounded-xl text-xs font-bold transition-all', filter === s ? 'text-navy-900' : 'glass hover:bg-white/10')}
+                    className={cn('shrink-0 px-4 py-2 rounded-xl text-xs font-bold transition-all', filter === s ? 'text-navy-900' : 'glass hover:bg-white/10')}
                     style={filter === s ? { background: 'linear-gradient(135deg,#D4A017,#F0C040)', color: '#0A1628' } : {}}>
               {s || 'All'}
             </button>
           ))}
         </div>
-        <div className="text-sm font-semibold" style={{ color: 'rgba(255,255,255,0.4)' }}>
+        <div className="text-sm font-semibold sm:text-right" style={{ color: 'rgba(255,255,255,0.4)' }}>
           Total Due: <span className="text-red-400 font-bold">{formatCurrency(summary.totalPending || 0)}</span>
         </div>
       </div>
 
       {/* TABLE */}
       <div className="glass rounded-2xl overflow-hidden">
-        <div className="overflow-x-auto">
+        <div className="sims-table-wrap">
           <table className="sims-table">
             <thead>
               <tr>
@@ -103,7 +103,7 @@ export default function AdminFees() {
                       <td><span className={cn('px-2.5 py-1 rounded-full text-xs font-bold', STATUS_BADGE[f.status] || STATUS_BADGE.PENDING)}>{f.status}</span></td>
                       <td className="text-white/40 text-xs">{f.paidDate ? formatDate(f.paidDate) : '—'}</td>
                       <td>
-                        <div className="flex gap-2">
+                        <div className="flex flex-wrap gap-2">
                           {f.status !== 'PAID' && (
                             <button onClick={() => handleMarkPaid(f.id, f.studentName)}
                                     className="px-3 py-1.5 rounded-lg text-xs font-bold transition-all"
@@ -128,7 +128,7 @@ export default function AdminFees() {
       {receipt && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
              style={{ background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(8px)' }}>
-          <div className="w-full max-w-md rounded-3xl p-8 shadow-2xl"
+          <div className="w-full max-w-md rounded-3xl p-5 shadow-2xl sm:p-8"
                style={{ background: '#0F2044', border: '1px solid rgba(255,255,255,0.1)' }}>
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-xl font-extrabold">🧾 Fee Receipt</h2>
@@ -148,20 +148,20 @@ export default function AdminFees() {
               ['Payment Date', receipt.paidDate ? formatDate(receipt.paidDate) : 'Not Paid'],
               ['Total Amount', formatCurrency(receipt.amount)],
             ].map(([k, v]) => (
-              <div key={k} className="flex justify-between py-2.5" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+              <div key={k} className="flex flex-col gap-1 py-2.5 sm:flex-row sm:items-center sm:justify-between" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
                 <span className="text-sm text-white/50">{k}</span>
-                <span className="text-sm font-bold text-white">{v}</span>
+                <span className="text-sm font-bold text-white sm:text-right">{v}</span>
               </div>
             ))}
-            <div className="flex justify-between py-3 mt-1">
+            <div className="flex items-center justify-between gap-3 py-3 mt-1">
               <span className="text-sm font-bold text-white/50">Amount Paid</span>
               <span className="text-base font-black text-green-400">{formatCurrency(receipt.paid)}</span>
             </div>
-            <div className="flex justify-between py-3" style={{ borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+            <div className="flex items-center justify-between gap-3 py-3" style={{ borderTop: '1px solid rgba(255,255,255,0.08)' }}>
               <span className="font-bold text-yellow-400">Balance Due</span>
               <span className="text-lg font-black text-yellow-400">{formatCurrency(receipt.balance)}</span>
             </div>
-            <div className="flex gap-3 mt-5">
+            <div className="mt-5 flex flex-col gap-3 sm:flex-row">
               <button onClick={() => setReceipt(null)} className="flex-1 py-3 rounded-xl text-sm font-bold glass hover:bg-white/10">Close</button>
               <button onClick={() => window.print()} className="flex-1 py-3 rounded-xl text-sm font-black"
                       style={{ background: 'linear-gradient(135deg,#D4A017,#F0C040)', color: '#0A1628' }}>

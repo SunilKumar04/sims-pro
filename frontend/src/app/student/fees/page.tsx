@@ -43,7 +43,7 @@ export default function StudentFees() {
     <AppShell title="My Fees" subtitle="Fee status & payment history">
 
       {/* STATUS BANNER */}
-      <div className="rounded-2xl p-6 mb-6 flex items-center gap-5"
+      <div className="rounded-2xl p-5 mb-6 flex flex-col items-start gap-5 sm:flex-row sm:items-center sm:p-6"
            style={{background:fc.bg,border:`1px solid ${fc.border}`}}>
         <div className="w-14 h-14 rounded-2xl flex items-center justify-center text-3xl flex-shrink-0"
              style={{background:fc.bg,border:`1px solid ${fc.border}`}}>
@@ -64,7 +64,7 @@ export default function StudentFees() {
         {feeStatus!=='PAID' && (
           <button
             onClick={()=>toast.info('💳 Online Payment Coming Soon', 'Please pay at the school accounts office. Account: GNPSS-2024 · IFSC: SBIN0001234')}
-            className="px-6 py-3 rounded-xl text-sm font-black transition-all hover:-translate-y-0.5 flex-shrink-0"
+            className="w-full px-6 py-3 rounded-xl text-sm font-black transition-all hover:-translate-y-0.5 flex-shrink-0 sm:w-auto"
             style={{background:'linear-gradient(135deg,#D4A017,#F0C040)',color:'#0A1628'}}>
             💳 Pay Now
           </button>
@@ -73,7 +73,7 @@ export default function StudentFees() {
 
       {/* FEE BREAKDOWN */}
       {latest && (
-        <div className="grid grid-cols-2 gap-6 mb-6">
+        <div className="grid grid-cols-1 gap-6 mb-6 xl:grid-cols-2">
           <div className="glass rounded-2xl p-6">
             <h3 className="text-sm font-bold text-white mb-4">💰 Fee Breakdown — {latest.term}</h3>
             <div className="space-y-3">
@@ -144,7 +144,41 @@ export default function StudentFees() {
           <div className="px-6 py-4" style={{borderBottom:'1px solid rgba(255,255,255,0.07)'}}>
             <h3 className="text-sm font-bold text-white">📋 Payment History</h3>
           </div>
-          <div className="overflow-x-auto">
+          <div className="space-y-3 p-4 md:hidden">
+            {feeData.map(f => {
+              const bal = f.amount - (f.paid||0);
+              const sc = feeColors[f.status]||feeColors.PENDING;
+              return (
+                <div key={f.id} className="rounded-2xl p-4" style={{background:'rgba(255,255,255,0.03)',border:'1px solid rgba(255,255,255,0.06)'}}>
+                  <div className="flex items-start justify-between gap-3 mb-3">
+                    <div>
+                      <div className="text-sm font-bold text-white">{f.term}</div>
+                      <div className="text-xs mt-1" style={{color:'rgba(255,255,255,0.4)'}}>Paid on {f.paidDate?.slice(0,10)||'—'}</div>
+                    </div>
+                    <span className="px-2.5 py-1 rounded-full text-xs font-bold" style={{background:sc.bg,color:sc.col,border:`1px solid ${sc.border}`}}>{f.status}</span>
+                  </div>
+                  <div className="grid grid-cols-3 gap-2 text-center">
+                    <div className="rounded-xl p-2" style={{background:'rgba(255,255,255,0.04)'}}>
+                      <div className="text-[11px] text-white/35">Total</div>
+                      <div className="text-sm font-bold text-white">₹{f.amount?.toLocaleString()}</div>
+                    </div>
+                    <div className="rounded-xl p-2" style={{background:'rgba(255,255,255,0.04)'}}>
+                      <div className="text-[11px] text-white/35">Paid</div>
+                      <div className="text-sm font-bold text-green-400">₹{(f.paid||0).toLocaleString()}</div>
+                    </div>
+                    <div className="rounded-xl p-2" style={{background:'rgba(255,255,255,0.04)'}}>
+                      <div className="text-[11px] text-white/35">Due</div>
+                      <div className="text-sm font-bold" style={{color:bal>0?'#FCA5A5':'#86EFAC'}}>₹{bal.toLocaleString()}</div>
+                    </div>
+                  </div>
+                  {f.status==='PAID' && (
+                    <button onClick={()=>setReceipt(f)} className="mt-3 text-xs font-bold text-yellow-400 hover:text-yellow-300">🧾 View receipt</button>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+          <div className="hidden overflow-x-auto md:block">
             <table className="sims-table">
               <thead>
                 <tr><th>Term</th><th>Total Amount</th><th>Paid</th><th>Balance</th><th>Payment Date</th><th>Status</th><th>Receipt</th></tr>
@@ -182,13 +216,13 @@ export default function StudentFees() {
              style={{background:'rgba(0,0,0,0.8)',backdropFilter:'blur(8px)'}}>
           <div className="w-full max-w-md rounded-3xl shadow-2xl overflow-hidden"
                style={{background:'#0F2044',border:'1px solid rgba(255,255,255,0.1)'}}>
-            <div className="text-center px-8 py-7" style={{background:'linear-gradient(160deg,#0F2044,#162952)',borderBottom:'1px solid rgba(255,255,255,0.07)'}}>
+            <div className="text-center px-5 py-6 sm:px-8 sm:py-7" style={{background:'linear-gradient(160deg,#0F2044,#162952)',borderBottom:'1px solid rgba(255,255,255,0.07)'}}>
               <div className="text-4xl mb-2">🎓</div>
               <div className="text-lg font-black text-white">Guru Nanak Public Sr. Sec. School</div>
               <div className="text-xs mt-1" style={{color:'rgba(255,255,255,0.4)'}}>Ludhiana, Punjab · CBSE Affiliated</div>
               <div className="text-xs font-black mt-2 text-yellow-400 uppercase tracking-wider">Official Fee Receipt</div>
             </div>
-            <div className="px-8 py-5 space-y-2">
+            <div className="px-5 py-5 space-y-2 sm:px-8">
               {([
                 ['Student',       user?.name||'—'],
                 ['Class',         user?.className||'—'],
@@ -210,7 +244,7 @@ export default function StudentFees() {
                 <span className="text-xl font-black text-green-400">₹{receipt.paid?.toLocaleString()}</span>
               </div>
             </div>
-            <div className="flex gap-3 px-8 pb-7">
+            <div className="flex gap-3 px-5 pb-6 sm:px-8 sm:pb-7">
               <button onClick={()=>setReceipt(null)} className="flex-1 py-3 rounded-xl text-sm font-bold glass hover:bg-white/10">Close</button>
               <button onClick={()=>window.print()} className="flex-1 py-3 rounded-xl text-sm font-black hover:-translate-y-0.5 transition-all"
                       style={{background:'linear-gradient(135deg,#D4A017,#F0C040)',color:'#0A1628'}}>

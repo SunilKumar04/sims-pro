@@ -139,9 +139,9 @@ export default function AdminStudents() {
 
       {/* ── TOOLBAR ── */}
       <div className="glass rounded-2xl p-5 mb-5">
-        <div className="flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3 flex-1">
-            <div className="flex items-center gap-2 px-3 py-2 rounded-xl flex-1 max-w-xs"
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div className="flex min-w-0 flex-1 flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
+            <div className="flex min-w-0 items-center gap-2 rounded-xl px-3 py-2 flex-1 sm:min-w-[220px] sm:max-w-xs"
                  style={{background:'rgba(255,255,255,0.05)',border:'1px solid rgba(255,255,255,0.08)'}}>
               <span style={{color:'rgba(255,255,255,0.3)',fontSize:14}}>🔍</span>
               <input value={search} onChange={e=>setSearch(e.target.value)}
@@ -150,13 +150,13 @@ export default function AdminStudents() {
               {search && <button onClick={()=>setSearch('')} className="text-white/30 hover:text-white/60 text-xs">✕</button>}
             </div>
             <select value={filterCls} onChange={e=>setFilterCls(e.target.value)}
-                    className="sims-input text-sm" style={{width:140,padding:'8px 28px 8px 12px'}}>
+                    className="sims-input text-sm w-full sm:w-auto" style={{width:140,padding:'8px 28px 8px 12px'}}>
               <option value="">All Classes</option>
               {CLASSES.map(c=><option key={c} value={c}>{c}</option>)}
             </select>
           </div>
           <button onClick={openAdd}
-                  className="px-5 py-2.5 rounded-xl text-sm font-bold transition-all hover:-translate-y-0.5"
+                  className="w-full rounded-xl px-5 py-2.5 text-sm font-bold transition-all hover:-translate-y-0.5 sm:w-auto"
                   style={{background:'linear-gradient(135deg,#D4A017,#F0C040)',color:'#0A1628'}}>
             + Add Student
           </button>
@@ -165,7 +165,70 @@ export default function AdminStudents() {
 
       {/* ── TABLE ── */}
       <div className="glass rounded-2xl overflow-hidden">
-        <div className="overflow-x-auto">
+        {loading ? (
+          <div className="p-4 space-y-3 md:hidden">
+            {[...Array(4)].map((_, i) => (
+              <div key={i} className="skeleton h-36 rounded-2xl" />
+            ))}
+          </div>
+        ) : students.length === 0 ? (
+          <div className="py-16 text-center md:hidden">
+            <div className="text-4xl mb-3 opacity-40">👨‍🎓</div>
+            <div className="text-base font-bold text-white">No students found</div>
+            <div className="text-sm mt-1" style={{color:'rgba(255,255,255,0.35)'}}>
+              {search||filterCls?'Try adjusting your filters':'Add your first student to get started'}
+            </div>
+          </div>
+        ) : (
+          <div className="divide-y md:hidden" style={{borderColor:'rgba(255,255,255,0.06)'}}>
+            {students.map((s, i) => (
+              <div key={s.id} className="p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-bold text-white/35">#{i + 1}</span>
+                      <span className="px-2.5 py-1 rounded-lg text-xs font-bold" style={{background:'rgba(30,144,255,0.15)',color:'#93C5FD'}}>{s.className}</span>
+                    </div>
+                    <div className="mt-2 text-sm font-bold text-white">{s.name}</div>
+                    <div className="text-xs text-white/35 break-all">{s.email}</div>
+                  </div>
+                  <span className={cn('px-2.5 py-1 rounded-full text-xs font-bold capitalize flex-shrink-0', FEE_BADGE[s.feeStatus as FeeStatus]||FEE_BADGE.PENDING)}>
+                    {(s.feeStatus||'pending').toLowerCase()}
+                  </span>
+                </div>
+
+                <div className="mt-4 grid grid-cols-2 gap-3 text-xs">
+                  <div className="rounded-xl p-3" style={{background:'rgba(255,255,255,0.03)'}}>
+                    <div className="text-white/35">Roll No</div>
+                    <div className="mt-1 font-mono text-white/70">{s.roll}</div>
+                  </div>
+                  <div className="rounded-xl p-3" style={{background:'rgba(255,255,255,0.03)'}}>
+                    <div className="text-white/35">Phone</div>
+                    <div className="mt-1 text-white/70">{s.phone || '—'}</div>
+                  </div>
+                  <div className="col-span-2 rounded-xl p-3" style={{background:'rgba(255,255,255,0.03)'}}>
+                    <div className="text-white/35">Parent</div>
+                    <div className="mt-1 text-white/70">{s.parentName || '—'}</div>
+                  </div>
+                </div>
+
+                <div className="mt-4 flex gap-2">
+                  <button onClick={()=>openEdit(s)}
+                          className="flex-1 px-3 py-2 rounded-xl text-xs font-bold transition-all hover:bg-white/15 glass">
+                    ✏️ Edit
+                  </button>
+                  <button onClick={()=>handleDelete(s.id,s.name)} disabled={deleting===s.id}
+                          className="px-4 py-2 rounded-xl text-xs font-bold transition-all disabled:opacity-40"
+                          style={{background:'rgba(239,68,68,0.12)',border:'1px solid rgba(239,68,68,0.3)',color:'#FCA5A5'}}>
+                    {deleting===s.id?'⏳':'🗑️'}
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        <div className="hidden overflow-x-auto md:block">
           <table className="sims-table">
             <thead>
               <tr><th>#</th><th>Name</th><th>Class</th><th>Roll No</th><th>Parent</th><th>Phone</th><th>Fee Status</th><th>Actions</th></tr>
@@ -239,7 +302,7 @@ export default function AdminStudents() {
             </div>
 
             <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-1">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <div>
                   <label className="block text-xs font-bold mb-1.5 uppercase tracking-wider" style={{color:'rgba(255,255,255,0.45)'}}>Full Name *</label>
                   <input value={form.name||''} onChange={e=>f('name',e.target.value)} className="sims-input" placeholder="Student's full name"/>
@@ -249,7 +312,7 @@ export default function AdminStudents() {
                   <input value={form.roll||''} onChange={e=>f('roll',e.target.value)} className="sims-input" placeholder="e.g. S008"/>
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <div>
                   <label className="block text-xs font-bold mb-1.5 uppercase tracking-wider" style={{color:'rgba(255,255,255,0.45)'}}>Class *</label>
                   <select value={form.className||''} onChange={e=>f('className',e.target.value)} className="sims-input">
@@ -262,7 +325,7 @@ export default function AdminStudents() {
                   <input type="date" value={form.dob||''} onChange={e=>f('dob',e.target.value)} className="sims-input"/>
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <div>
                   <label className="block text-xs font-bold mb-1.5 uppercase tracking-wider" style={{color:'rgba(255,255,255,0.45)'}}>Parent Name {modal==='add'?'*':''}</label>
                   <input value={form.parentName||''} onChange={e=>f('parentName',e.target.value)} className="sims-input" placeholder="Parent's name"/>
@@ -272,7 +335,7 @@ export default function AdminStudents() {
                   <input value={form.phone||''} onChange={e=>f('phone',e.target.value)} className="sims-input" placeholder="10-digit number"/>
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <div>
                   <label className="block text-xs font-bold mb-1.5 uppercase tracking-wider" style={{color:'rgba(255,255,255,0.45)'}}>Parent Phone</label>
                   <input value={form.parentPhone||''} onChange={e=>f('parentPhone',e.target.value)} className="sims-input" placeholder="Parent's number"/>
@@ -299,7 +362,7 @@ export default function AdminStudents() {
               )}
             </div>
 
-            <div className="flex gap-3 mt-6 pt-5" style={{borderTop:'1px solid rgba(255,255,255,0.07)'}}>
+            <div className="mt-6 flex flex-col gap-3 pt-5 sm:flex-row" style={{borderTop:'1px solid rgba(255,255,255,0.07)'}}>
               <button onClick={()=>setModal(null)} className="flex-1 py-3 rounded-xl text-sm font-bold glass hover:bg-white/10">Cancel</button>
               <button onClick={handleSave} disabled={saving}
                       className="flex-1 py-3 rounded-xl text-sm font-black transition-all hover:-translate-y-0.5 disabled:opacity-60"

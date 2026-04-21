@@ -2,11 +2,10 @@
 // src/app/teacher/marks/page.tsx  — saves to PostgreSQL via /marks/bulk
 import { useEffect, useState, useCallback } from 'react';
 import AppShell from '@/components/layout/AppShell';
-import { studentsApi, marksApi } from '@/lib/api';
+import { studentsApi, marksApi, timetableApi, classesApi } from '@/lib/api';
 import { getUser } from '@/lib/auth';
 import { toast } from '@/components/ui/Toast';
 
-const MY_CLASSES  = ['10A','10B','8A','9A'];
 const EXAM_TYPES  = [
   { label:'Unit Test 1', value:'UNIT_TEST'  },
   { label:'Unit Test 2', value:'UNIT_TEST'  },
@@ -27,7 +26,9 @@ function grade(marks: number, max = 100): { g: string; col: string } {
 }
 
 export default function TeacherMarks() {
-  const [className,  setClassName]  = useState('10A');
+  const user = getUser();
+  const [classes,    setClasses]    = useState<string[]>([]);
+  const [className,  setClassName]  = useState('');
   const [examType,   setExamType]   = useState('FINAL');
   const [examLabel,  setExamLabel]  = useState('Final Exam');
   const [subject,    setSubject]    = useState('Mathematics');
@@ -40,16 +41,56 @@ export default function TeacherMarks() {
   const [saved,      setSaved]      = useState(false);
   const [saveMsg,    setSaveMsg]    = useState('');
 
+  const loadClasses = useCallback(async () => {
+    try {
+      const [mappingsRes, classesRes] = await Promise.all([
+        timetableApi.getMappings(),
+        classesApi.getAll({}),
+      ]);
+
+      const allMappings = mappingsRes.data.data ?? [];
+      const teacherClasses = [...new Set(
+        allMappings
+          .filter((item: any) => item.teacherId === user?.teacherId || item.teacher?.user?.name === user?.name)
+          .map((item: any) => item.className)
+          .filter(Boolean),
+      )];
+
+      const systemClasses = (classesRes.data.data ?? [])
+        .map((item: any) => item.name)
+        .filter(Boolean);
+
+      const availableClasses = teacherClasses.length > 0 ? teacherClasses : systemClasses;
+      setClasses(availableClasses);
+      setClassName((current) => current && availableClasses.includes(current)
+        ? current
+        : availableClasses[0] ?? '');
+    } catch {
+      setClasses([]);
+      setClassName('');
+    }
+  }, [user?.name, user?.teacherId]);
+
   const load = useCallback(async () => {
+    if (!className) {
+      setStudents([]);
+      setExisting([]);
+      setMarks({});
+      return;
+    }
     setLoading(true);
     try {
-      const [stuRes, mrkRes] = await Promise.all([
-        studentsApi.getAll({ className }),
-        marksApi.getByClass(className, examType),
-      ]);
+      const stuRes = await studentsApi.getAll({ className });
       const studs = stuRes.data.data || [];
-      const existingMarks: any[] = mrkRes.data.data || [];
       setStudents(studs);
+
+      let existingMarks: any[] = [];
+      try {
+        const mrkRes = await marksApi.getByClass(className, examType);
+        existingMarks = mrkRes.data.data || [];
+      } catch {
+        existingMarks = [];
+      }
       setExisting(existingMarks);
 
       // Pre-fill from existing DB data
@@ -61,10 +102,16 @@ export default function TeacherMarks() {
       setMarks(init);
     } catch {
       setStudents([]);
+      setExisting([]);
+      setMarks({});
     } finally {
       setLoading(false);
     }
   }, [className, examType, subject]);
+
+  useEffect(() => {
+    void loadClasses();
+  }, [loadClasses]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -120,13 +167,14 @@ export default function TeacherMarks() {
 
       {/* CONTROLS */}
       <div className="glass rounded-2xl p-5 mb-5 flex items-center justify-between gap-4 flex-wrap">
-        <div className="flex items-center gap-3 flex-wrap">
+        <div className="grid w-full gap-3 sm:grid-cols-2 xl:flex xl:w-auto xl:flex-wrap xl:items-end">
           {/* Class */}
           <div>
             <label className="block text-xs font-bold mb-1 uppercase tracking-wider" style={{color:'rgba(255,255,255,0.4)'}}>Class</label>
             <select value={className} onChange={e=>setClassName(e.target.value)}
                     className="sims-input text-sm" style={{width:100,padding:'8px 28px 8px 12px'}}>
-              {MY_CLASSES.map(c=><option key={c} value={c}>{c}</option>)}
+              {classes.length === 0 && <option value="">No classes found</option>}
+              {classes.map(c=><option key={c} value={c}>{c}</option>)}
             </select>
           </div>
           {/* Exam Type */}
@@ -159,7 +207,7 @@ export default function TeacherMarks() {
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex w-full flex-col items-stretch gap-3 sm:w-auto sm:flex-row sm:items-center">
           {savedCount > 0 && (
             <span className="text-xs px-3 py-1.5 rounded-xl font-bold"
                   style={{background:'rgba(34,197,94,0.12)',border:'1px solid rgba(34,197,94,0.25)',color:'#86EFAC'}}>
@@ -175,7 +223,7 @@ export default function TeacherMarks() {
       </div>
 
       {/* STATS */}
-      <div className="grid grid-cols-4 gap-4 mb-5">
+      <div className="grid grid-cols-1 gap-4 mb-5 sm:grid-cols-2 xl:grid-cols-4">
         {[
           {label:'Students',   value:students.length, col:'rgba(255,255,255,0.7)', bg:'rgba(255,255,255,0.05)'},
           {label:'Class Avg',  value:`${avg}/${maxMarks}`, col:'#F0C040', bg:'rgba(212,160,23,0.08)'},
@@ -199,7 +247,54 @@ export default function TeacherMarks() {
             <p className="text-sm font-bold text-white">No students in {className}</p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
+          <>
+            <div className="divide-y md:hidden" style={{borderColor:'rgba(255,255,255,0.06)'}}>
+              {students.map((s, i) => {
+                const m = marks[s.id] ?? 0;
+                const pct  = maxMarks > 0 ? Math.round((m/maxMarks)*100) : 0;
+                const { g, col } = grade(m, maxMarks);
+                const inDb = existing.some((e: any) => e.studentId === s.id && e.subject === subject);
+                return (
+                  <div key={s.id} className="p-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <div className="text-xs text-white/35">#{i + 1} · {s.roll}</div>
+                        <div className="mt-1 text-sm font-bold text-white">{s.name}</div>
+                      </div>
+                      <span className="px-2.5 py-1 rounded-full text-xs font-black flex-shrink-0" style={{background:`${col}20`,color:col}}>
+                        {g}
+                      </span>
+                    </div>
+                    <div className="mt-4 grid grid-cols-[1fr_auto] items-center gap-3">
+                      <input
+                        type="number" value={m} min={0} max={maxMarks}
+                        onChange={e => setMark(s.id, parseInt(e.target.value) || 0)}
+                        className="sims-input text-sm font-black text-center"
+                      />
+                      <div className="text-right">
+                        <div className="text-sm font-bold" style={{color:col}}>{pct}%</div>
+                        <div className="text-[10px] text-white/35">out of {maxMarks}</div>
+                      </div>
+                    </div>
+                    <div className="mt-3 w-full h-1.5 rounded-full overflow-hidden" style={{background:'rgba(255,255,255,0.07)'}}>
+                      <div className="h-full rounded-full" style={{width:`${pct}%`,background:col}}/>
+                    </div>
+                    <div className="mt-3 flex items-center justify-between text-xs">
+                      <span className="text-white/35">{subject}</span>
+                      <span className="px-2 py-1 rounded-lg font-bold"
+                            style={{
+                              background: inDb?'rgba(34,197,94,0.12)':'rgba(255,255,255,0.06)',
+                              color: inDb?'#86EFAC':'rgba(255,255,255,0.3)',
+                            }}>
+                        {inDb ? '✅ Saved' : '⏳ Not saved'}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="hidden overflow-x-auto md:block">
             <table className="sims-table">
               <thead>
                 <tr>
@@ -251,7 +346,8 @@ export default function TeacherMarks() {
                 })}
               </tbody>
             </table>
-          </div>
+            </div>
+          </>
         )}
       </div>
 

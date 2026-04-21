@@ -20,6 +20,11 @@
 
 * { box-sizing: border-box; }
 
+html, body {
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
 body {
   font-family: 'Outfit', sans-serif;
   background: var(--navy-800);
@@ -70,6 +75,16 @@ body {
   backdrop-filter: blur(12px);
 }
 
+.sims-table-wrap {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.sims-table-wrap > .sims-table {
+  min-width: 640px;
+}
+
 /* Table */
 .sims-table { width: 100%; border-collapse: collapse; }
 .sims-table thead th {
@@ -114,6 +129,59 @@ body {
   background: rgba(255,255,255,0.07);
 }
 .sims-input option { background: #0A1628; color: white; }
+
+.sims-section-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.sims-chip-row {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.sims-mobile-scroll {
+  display: flex;
+  gap: 0.75rem;
+  overflow-x: auto;
+  padding-bottom: 0.25rem;
+  scroll-snap-type: x proximity;
+  -webkit-overflow-scrolling: touch;
+}
+
+.sims-mobile-scroll > * {
+  scroll-snap-align: start;
+}
+
+.sims-stat-card {
+  min-width: 0;
+}
+
+@media (max-width: 767px) {
+  .sims-table thead th {
+    padding: 10px 12px;
+    font-size: 10px;
+  }
+
+  .sims-table tbody td {
+    padding: 11px 12px;
+    font-size: 13px;
+  }
+
+  .sims-input {
+    padding: 9px 12px;
+    font-size: 13px;
+  }
+
+  .sims-mobile-scroll {
+    margin-inline: -0.15rem;
+    padding-inline: 0.15rem;
+  }
+}
 
 /* Ticker */
 @keyframes ticker {

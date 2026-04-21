@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { FeeStatus } from '@prisma/client';
+import { buildInitialFeeData } from './fee-defaults';
 
 @Injectable()
 export class FeesService {
@@ -13,7 +14,40 @@ export class FeesService {
     return byUser?.id ?? null;
   }
 
+  private async ensureMissingFeeRecords() {
+    const studentsWithoutFees = await this.prisma.student.findMany({
+      where: { fees: { none: {} } },
+      select: { id: true, className: true },
+    });
+
+    if (studentsWithoutFees.length === 0) return;
+
+    await this.prisma.fee.createMany({
+      data: studentsWithoutFees.map((student) => buildInitialFeeData(student.id, student.className)),
+    });
+  }
+
+  private async ensureStudentFeeRecord(studentId: string) {
+    const existingFee = await this.prisma.fee.findFirst({
+      where: { studentId },
+      select: { id: true },
+    });
+    if (existingFee) return;
+
+    const student = await this.prisma.student.findUnique({
+      where: { id: studentId },
+      select: { id: true, className: true },
+    });
+    if (!student) return;
+
+    await this.prisma.fee.create({
+      data: buildInitialFeeData(student.id, student.className),
+    });
+  }
+
   async findAll(query: any) {
+    await this.ensureMissingFeeRecords();
+
     const where: any = {};
     if (query.status) where.status = query.status.toUpperCase();
     if (query.term)   where.term   = { contains: query.term, mode: 'insensitive' };
@@ -57,6 +91,8 @@ export class FeesService {
   async findByStudent(rawStudentId: string) {
     const studentId = await this.resolveStudentId(rawStudentId);
     if (!studentId) return { success: true, data: [] };
+
+    await this.ensureStudentFeeRecord(studentId);
 
     const fees = await this.prisma.fee.findMany({
       where: { studentId },

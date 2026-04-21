@@ -139,10 +139,10 @@ export default function AdminSettings() {
     <AppShell title="Settings" subtitle="System configuration & preferences">
 
       {/* TAB BAR */}
-      <div className="glass rounded-2xl p-1.5 mb-6 flex gap-1">
+      <div className="glass rounded-2xl p-1.5 mb-6 flex gap-1 overflow-x-auto">
         {TABS.map(t => (
           <button key={t.id} onClick={() => setTab(t.id)}
-                  className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-bold transition-all"
+                  className="flex min-w-max flex-1 items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-sm font-bold transition-all"
                   style={{
                     background: tab===t.id ? 'rgba(212,160,23,0.15)' : 'transparent',
                     border:     `1px solid ${tab===t.id ? 'rgba(212,160,23,0.3)' : 'transparent'}`,
@@ -155,19 +155,19 @@ export default function AdminSettings() {
 
       {/* ── SCHOOL INFO ── */}
       {tab === 'school' && (
-        <div className="glass rounded-2xl p-8">
-          <div className="flex items-center justify-between mb-6">
+        <div className="glass rounded-2xl p-5 sm:p-8">
+          <div className="sims-section-header mb-6">
             <div>
               <h2 className="text-base font-bold text-white">School Information</h2>
               <p className="text-xs mt-0.5" style={{color:'rgba(255,255,255,0.4)'}}>Shown across the portal and receipts</p>
             </div>
             <button onClick={saveSchool} disabled={savingSchool}
-                    className="px-5 py-2.5 rounded-xl text-sm font-black transition-all hover:-translate-y-0.5 disabled:opacity-60"
+                    className="w-full px-5 py-2.5 rounded-xl text-sm font-black transition-all hover:-translate-y-0.5 disabled:opacity-60 sm:w-auto"
                     style={{background:'linear-gradient(135deg,#D4A017,#F0C040)',color:'#0A1628'}}>
               {savingSchool ? '⏳ Saving...' : '💾 Save Changes'}
             </button>
           </div>
-          <div className="grid grid-cols-2 gap-5">
+          <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-2">
             {([
               ['School Full Name','name','text','Guru Nanak Public...'],
               ['Short Name','short','text','GNPSS'],
@@ -184,7 +184,7 @@ export default function AdminSettings() {
                        className="sims-input" placeholder={ph}/>
               </div>
             ))}
-            <div className="col-span-2">
+            <div className="md:col-span-2">
               <label className="block text-xs font-bold mb-1.5 uppercase tracking-wider" style={{color:'rgba(255,255,255,0.4)'}}>Full Address</label>
               <input value={school.address||''} onChange={e=>sf('address',e.target.value)}
                      className="sims-input" placeholder="Street, City, State – PIN"/>
@@ -196,18 +196,18 @@ export default function AdminSettings() {
       {/* ── FEE STRUCTURE ── */}
       {tab === 'fees' && (
         <div className="glass rounded-2xl overflow-hidden">
-          <div className="flex items-center justify-between px-6 py-5" style={{borderBottom:'1px solid rgba(255,255,255,0.07)'}}>
+          <div className="sims-section-header px-5 py-5 sm:px-6" style={{borderBottom:'1px solid rgba(255,255,255,0.07)'}}>
             <div>
               <h2 className="text-base font-bold text-white">Annual Fee Structure</h2>
               <p className="text-xs mt-0.5" style={{color:'rgba(255,255,255,0.4)'}}>Edit fee amounts per grade — saved locally</p>
             </div>
             <button onClick={saveFees} disabled={savingFees}
-                    className="px-5 py-2.5 rounded-xl text-sm font-black hover:-translate-y-0.5 transition-all disabled:opacity-60"
+                    className="w-full px-5 py-2.5 rounded-xl text-sm font-black hover:-translate-y-0.5 transition-all disabled:opacity-60 sm:w-auto"
                     style={{background:'linear-gradient(135deg,#D4A017,#F0C040)',color:'#0A1628'}}>
               {savingFees ? '⏳ Saving...' : '💾 Save Structure'}
             </button>
           </div>
-          <div className="overflow-x-auto">
+          <div className="sims-table-wrap">
             <table className="sims-table">
               <thead>
                 <tr><th>Grade</th><th>Tuition (₹)</th><th>Transport (₹)</th><th>Lab Fee (₹)</th><th>Sports (₹)</th><th>Total / Year</th></tr>
@@ -250,14 +250,14 @@ export default function AdminSettings() {
 
       {/* ── PREFERENCES ── */}
       {tab === 'prefs' && (
-        <div className="glass rounded-2xl p-8">
-          <div className="flex items-center justify-between mb-6">
+        <div className="glass rounded-2xl p-5 sm:p-8">
+          <div className="sims-section-header mb-6">
             <div>
               <h2 className="text-base font-bold text-white">System Preferences</h2>
               <p className="text-xs mt-0.5" style={{color:'rgba(255,255,255,0.4)'}}>Configure notifications and portal behaviour</p>
             </div>
             <button onClick={savePrefs} disabled={savingPrefs}
-                    className="px-5 py-2.5 rounded-xl text-sm font-black hover:-translate-y-0.5 transition-all disabled:opacity-60"
+                    className="w-full px-5 py-2.5 rounded-xl text-sm font-black hover:-translate-y-0.5 transition-all disabled:opacity-60 sm:w-auto"
                     style={{background:'linear-gradient(135deg,#D4A017,#F0C040)',color:'#0A1628'}}>
               {savingPrefs ? '⏳ Saving...' : '💾 Save Preferences'}
             </button>
@@ -271,9 +271,9 @@ export default function AdminSettings() {
               ['attendAlert','📅','Daily Attendance Alerts', 'Notify parents when child is marked absent'],
               ['hwNotif',    '📚','Homework Notifications',  'Alert students when new homework is assigned'],
             ] as [string,string,string,string][]).map(([key,icon,title,desc]) => (
-              <div key={key} className="flex items-center justify-between px-5 py-4 rounded-xl transition-all hover:bg-white/[0.02]"
+              <div key={key} className="flex flex-col gap-4 px-4 py-4 rounded-xl transition-all hover:bg-white/[0.02] sm:flex-row sm:items-center sm:justify-between sm:px-5"
                    style={{background:'rgba(255,255,255,0.03)',border:'1px solid rgba(255,255,255,0.06)'}}>
-                <div className="flex items-center gap-3">
+                <div className="flex items-start gap-3">
                   <span className="text-xl w-8 text-center">{icon}</span>
                   <div>
                     <div className="text-sm font-bold text-white">{title}</div>
@@ -289,9 +289,9 @@ export default function AdminSettings() {
 
       {/* ── SECURITY ── */}
       {tab === 'security' && (
-        <div className="grid grid-cols-2 gap-5">
+        <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
           {/* Change password */}
-          <div className="glass rounded-2xl p-8">
+          <div className="glass rounded-2xl p-5 sm:p-8">
             <h2 className="text-base font-bold text-white mb-1">Change Password</h2>
             <p className="text-xs mb-5" style={{color:'rgba(255,255,255,0.4)'}}>
               Logged in as <span className="text-yellow-400 font-semibold">{user?.email}</span>
@@ -355,7 +355,7 @@ export default function AdminSettings() {
           </div>
 
           {/* Session info */}
-          <div className="glass rounded-2xl p-8">
+          <div className="glass rounded-2xl p-5 sm:p-8">
             <h2 className="text-base font-bold text-white mb-1">Session & Security</h2>
             <p className="text-xs mb-5" style={{color:'rgba(255,255,255,0.4)'}}>Current session and access info</p>
             <div className="space-y-3">
@@ -365,9 +365,9 @@ export default function AdminSettings() {
                 ['📋','Audit Log',     'Enabled','All admin actions are being recorded'],
                 ['🌐','CORS Policy',   'localhost:3000','Frontend origin allowed by API'],
               ].map(([icon,title,badge,desc])=>(
-                <div key={title as string} className="flex items-center justify-between px-4 py-3.5 rounded-xl"
+                <div key={title as string} className="flex flex-col gap-3 px-4 py-3.5 rounded-xl sm:flex-row sm:items-center sm:justify-between"
                      style={{background:'rgba(255,255,255,0.03)',border:'1px solid rgba(255,255,255,0.06)'}}>
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-start gap-3">
                     <span className="text-lg w-7 text-center">{icon}</span>
                     <div>
                       <div className="text-sm font-bold text-white">{title}</div>

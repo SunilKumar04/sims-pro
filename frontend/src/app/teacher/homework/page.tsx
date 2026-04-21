@@ -63,7 +63,7 @@ export default function TeacherHomework() {
     <AppShell title="Homework" subtitle="Assign and manage student homework">
 
       {/* STATS */}
-      <div className="grid grid-cols-3 gap-4 mb-6">
+      <div className="grid grid-cols-1 gap-4 mb-6 sm:grid-cols-3">
         {[
           {icon:'📚',label:'Total Assigned',  value:hw.length,    col:'#F0C040',bg:'rgba(212,160,23,0.12)',bd:'rgba(212,160,23,0.2)'},
           {icon:'⏳',label:'Due This Week',   value:totalDue,     col:'#FCA5A5',bg:'rgba(239,68,68,0.12)',bd:'rgba(239,68,68,0.2)'},
@@ -78,8 +78,8 @@ export default function TeacherHomework() {
       </div>
 
       {/* TOOLBAR */}
-      <div className="glass rounded-2xl p-4 mb-5 flex items-center justify-between gap-4">
-        <div className="flex items-center gap-2">
+      <div className="glass rounded-2xl p-4 mb-5 flex flex-wrap items-center justify-between gap-4">
+        <div className="flex flex-wrap items-center gap-2">
           {['', ...MY_CLASSES].map(c=>(
             <button key={c} onClick={()=>setFilterCls(c)}
                     className="px-3 py-1.5 rounded-xl text-xs font-bold transition-all"
@@ -93,7 +93,7 @@ export default function TeacherHomework() {
           ))}
         </div>
         <button onClick={()=>{setForm({subject:'Mathematics',className:'10A'});setModal(true);}}
-                className="px-5 py-2.5 rounded-xl text-sm font-black hover:-translate-y-0.5 transition-all"
+                className="w-full rounded-xl px-5 py-2.5 text-sm font-black transition-all hover:-translate-y-0.5 sm:w-auto"
                 style={{background:'linear-gradient(135deg,#D4A017,#F0C040)',color:'#0A1628'}}>
           + Assign Homework
         </button>
@@ -164,7 +164,7 @@ export default function TeacherHomework() {
                 <label className="block text-xs font-bold mb-1.5 uppercase tracking-wider" style={{color:'rgba(255,255,255,0.4)'}}>Title *</label>
                 <input value={form.title||''} onChange={e=>sf('title',e.target.value)} className="sims-input" placeholder="Homework title"/>
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <div>
                   <label className="block text-xs font-bold mb-1.5 uppercase tracking-wider" style={{color:'rgba(255,255,255,0.4)'}}>Subject</label>
                   <select value={form.subject||''} onChange={e=>sf('subject',e.target.value)} className="sims-input">

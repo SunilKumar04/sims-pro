@@ -125,7 +125,7 @@ export default function AdminClasses() {
     <AppShell title="Classes & Sections" subtitle={`${totalClasses} active classes`}>
 
       {/* ── STAT CARDS ── */}
-      <div className="grid grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-1 gap-4 mb-6 sm:grid-cols-2 xl:grid-cols-4">
         {[
           { icon: '🏫', label: 'Total Classes',    value: totalClasses,   col: '#F0C040', bg: 'rgba(212,160,23,0.12)',  bd: 'rgba(212,160,23,0.2)'  },
           { icon: '👨‍🎓', label: 'Total Students',  value: totalStudents,  col: '#86EFAC', bg: 'rgba(34,197,94,0.12)',   bd: 'rgba(34,197,94,0.2)'   },
@@ -167,7 +167,7 @@ export default function AdminClasses() {
 
       {/* ── LOADING ── */}
       {loading && (
-        <div className="grid grid-cols-3 gap-5">
+        <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
           {[...Array(6)].map((_, i) => <div key={i} className="skeleton rounded-2xl h-52" />)}
         </div>
       )}
@@ -208,7 +208,7 @@ export default function AdminClasses() {
                 </div>
 
                 {/* Class cards for this grade */}
-                <div className="grid grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
                   {(gradeClasses as any[]).map(c => <ClassCard key={c.id} cls={c} gs={gs}
                     onEdit={openEdit} onView={openView} onDelete={handleDelete} deleting={deleting} />)}
                 </div>
@@ -220,7 +220,7 @@ export default function AdminClasses() {
 
       {/* ── FILTERED GRID ── */}
       {!loading && displayed.length > 0 && filterGrade && (
-        <div className="grid grid-cols-3 gap-5">
+        <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
           {displayed.map(c => {
             const gs = gradeStyle(c.grade || filterGrade);
             return <ClassCard key={c.id} cls={c} gs={gs}
@@ -239,7 +239,56 @@ export default function AdminClasses() {
             <h3 className="text-sm font-bold text-white">All Classes — Summary Table</h3>
             <span className="text-xs" style={{ color: 'rgba(255,255,255,0.35)' }}>{classes.length} total</span>
           </div>
-          <div className="overflow-x-auto">
+          <div className="divide-y md:hidden" style={{borderColor:'rgba(255,255,255,0.06)'}}>
+            {classes.map(c => {
+              const cap = getCapacity(c.studentCount || 0);
+              const gs  = gradeStyle(c.grade || '');
+              return (
+                <div key={c.id} className="p-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <span className="px-2.5 py-1 rounded-lg text-sm font-black" style={{ background: gs.bg, color: gs.text }}>{c.name}</span>
+                      <div className="mt-2 text-xs text-white/35">Grade {c.grade} · Section {c.section}</div>
+                    </div>
+                    <span className="text-xs px-2 py-0.5 rounded-lg font-mono flex-shrink-0"
+                          style={{ background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.5)' }}>
+                      {c.room}
+                    </span>
+                  </div>
+                  <div className="mt-4 grid grid-cols-2 gap-3 text-xs">
+                    <div className="rounded-xl p-3" style={{background:'rgba(255,255,255,0.03)'}}>
+                      <div className="text-white/35">Class Teacher</div>
+                      <div className="mt-1 text-white/70">{c.teacherName || '—'}</div>
+                    </div>
+                    <div className="rounded-xl p-3" style={{background:'rgba(255,255,255,0.03)'}}>
+                      <div className="text-white/35">Subject</div>
+                      <div className="mt-1 text-white/70">{c.subject || '—'}</div>
+                    </div>
+                  </div>
+                  <div className="mt-4 rounded-xl p-3" style={{background:'rgba(255,255,255,0.03)'}}>
+                    <div className="mb-2 flex items-center justify-between">
+                      <span className="text-xs text-white/35">{c.studentCount || 0} students</span>
+                      <span className="text-xs font-bold" style={{ color: cap.color }}>{cap.label}</span>
+                    </div>
+                    <div className="w-full h-1.5 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.08)' }}>
+                      <div className="h-full rounded-full transition-all" style={{ width: `${cap.pct}%`, background: cap.color }} />
+                    </div>
+                  </div>
+                  <div className="mt-4 flex gap-2">
+                    <button onClick={() => openView(c)} className="flex-1 px-3 py-2 rounded-xl text-xs font-bold glass hover:bg-white/10">👁 View</button>
+                    <button onClick={() => openEdit(c)} className="flex-1 px-3 py-2 rounded-xl text-xs font-bold"
+                            style={{ background: 'rgba(212,160,23,0.12)', color: '#F0C040', border: '1px solid rgba(212,160,23,0.2)' }}>✏️ Edit</button>
+                    <button onClick={() => handleDelete(c.id, c.name)} disabled={deleting === c.id}
+                            className="px-3 py-2 rounded-xl text-xs font-bold disabled:opacity-40"
+                            style={{ background: 'rgba(239,68,68,0.12)', color: '#FCA5A5', border: '1px solid rgba(239,68,68,0.2)' }}>
+                      {deleting === c.id ? '⏳' : '🗑️'}
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          <div className="hidden overflow-x-auto md:block">
             <table className="sims-table">
               <thead>
                 <tr>
@@ -326,7 +375,7 @@ export default function AdminClasses() {
             <div className="px-8 pb-2 space-y-4 max-h-[60vh] overflow-y-auto">
 
               {/* Grade + Section + auto-name */}
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
                 <div>
                   <label className="block text-xs font-bold mb-1.5 uppercase tracking-wider" style={{ color: 'rgba(255,255,255,0.4)' }}>Grade *</label>
                   <select value={form.grade || ''} onChange={e => {
@@ -356,7 +405,7 @@ export default function AdminClasses() {
               </div>
 
               {/* Teacher + Subject */}
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <div>
                   <label className="block text-xs font-bold mb-1.5 uppercase tracking-wider" style={{ color: 'rgba(255,255,255,0.4)' }}>Class Teacher</label>
                   <select value={form.teacherName || ''} onChange={e => sf('teacherName', e.target.value)} className="sims-input">
@@ -374,7 +423,7 @@ export default function AdminClasses() {
               </div>
 
               {/* Room + Students */}
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <div>
                   <label className="block text-xs font-bold mb-1.5 uppercase tracking-wider" style={{ color: 'rgba(255,255,255,0.4)' }}>Classroom / Room No.</label>
                   <select value={form.room || ''} onChange={e => sf('room', e.target.value)} className="sims-input">
@@ -406,7 +455,7 @@ export default function AdminClasses() {
               )}
             </div>
 
-            <div className="flex gap-3 px-8 py-6" style={{ borderTop: '1px solid rgba(255,255,255,0.07)' }}>
+            <div className="flex flex-col gap-3 px-8 py-6 sm:flex-row" style={{ borderTop: '1px solid rgba(255,255,255,0.07)' }}>
               <button onClick={() => setModal(null)} className="flex-1 py-3 rounded-xl text-sm font-bold glass hover:bg-white/10 transition-all">Cancel</button>
               <button onClick={handleSave} disabled={saving}
                       className="flex-1 py-3 rounded-xl text-sm font-black transition-all hover:-translate-y-0.5 disabled:opacity-60"
@@ -468,7 +517,7 @@ export default function AdminClasses() {
                 </div>
               </div>
 
-              <div className="flex gap-3 px-6 pb-7">
+              <div className="flex flex-col gap-3 px-6 pb-7 sm:flex-row">
                 <button onClick={() => setModal(null)} className="flex-1 py-3 rounded-xl text-sm font-bold glass hover:bg-white/10 transition-all">Close</button>
                 <button onClick={() => { setModal(null); setTimeout(() => openEdit(selected), 50); }}
                         className="flex-1 py-3 rounded-xl text-sm font-black hover:-translate-y-0.5 transition-all"

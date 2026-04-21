@@ -6,6 +6,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CreateStudentDto } from './dto/create-student.dto';
 import { UpdateStudentDto } from './dto/update-student.dto';
 import { QueryStudentDto } from './dto/query-student.dto';
+import { buildInitialFeeData } from '../fees/fee-defaults';
 import * as bcrypt from 'bcryptjs';
 import { Role } from '@prisma/client';
 
@@ -23,25 +24,35 @@ export class StudentsService {
 
     const hashed = await bcrypt.hash(dto.password || 'Student@1234', 10);
 
-    const user = await this.prisma.user.create({
-      data: {
-        email: dto.email,
-        password: hashed,
-        name: dto.name,
-        role: Role.STUDENT,
-        student: {
-          create: {
-            roll: dto.roll,
-            className: dto.className,
-            phone: dto.phone,
-            parentName: dto.parentName,
-            parentPhone: dto.parentPhone || '',
-            address: dto.address,
-            dob: new Date(dto.dob),
+    const user = await this.prisma.$transaction(async (tx) => {
+      const createdUser = await tx.user.create({
+        data: {
+          email: dto.email,
+          password: hashed,
+          name: dto.name,
+          role: Role.STUDENT,
+          student: {
+            create: {
+              roll: dto.roll,
+              className: dto.className,
+              phone: dto.phone,
+              parentName: dto.parentName,
+              parentPhone: dto.parentPhone || '',
+              address: dto.address,
+              dob: new Date(dto.dob),
+            },
           },
         },
-      },
-      include: { student: true },
+        include: { student: true },
+      });
+
+      if (createdUser.student?.id) {
+        await tx.fee.create({
+          data: buildInitialFeeData(createdUser.student.id, createdUser.student.className),
+        });
+      }
+
+      return createdUser;
     });
 
     return { success: true, message: 'Student created successfully', data: this.formatStudent(user) };
