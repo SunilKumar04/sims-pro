@@ -1,0 +1,87 @@
+version: '3.9'
+
+services:
+  # ── PostgreSQL Database ──
+  postgres:
+    image: postgres:16-alpine
+    container_name: sims_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: sims_db
+      POSTGRES_USER: sims_user
+      POSTGRES_PASSWORD: sims_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sims_user -d sims_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - sims_network
+
+  # ── Backend (NestJS) ──
+  backend:
+    build:
+      context: ../backend
+      dockerfile: Dockerfile
+    container_name: sims_backend
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 4000
+      DATABASE_URL: postgresql://sims_user:sims_password@postgres:5432/sims_db?schema=public
+      JWT_SECRET: ${JWT_SECRET:-sims-super-secret-jwt-key-change-in-production-32chars}
+      JWT_EXPIRES_IN: 7d
+      CLIENT_URL: ${CLIENT_URL:-http://localhost:3000}
+    ports:
+      - "4000:4000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - sims_network
+
+  # ── Frontend (Next.js) ──
+  frontend:
+    build:
+      context: ../frontend
+      dockerfile: Dockerfile
+    container_name: sims_frontend
+    restart: unless-stopped
+    environment:
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:4000/api/v1}
+      NEXTAUTH_URL: ${NEXTAUTH_URL:-http://localhost:3000}
+      NEXTAUTH_SECRET: ${NEXTAUTH_SECRET:-sims-nextauth-secret-change-in-prod}
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+    networks:
+      - sims_network
+
+  # ── pgAdmin (optional, dev only) ──
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: sims_pgadmin
+    restart: unless-stopped
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@gnpss.edu.in
+      PGADMIN_DEFAULT_PASSWORD: admin123
+    ports:
+      - "5050:80"
+    depends_on:
+      - postgres
+    networks:
+      - sims_network
+    profiles:
+      - dev
+
+volumes:
+  postgres_data:
+
+networks:
+  sims_network:
+    driver: bridge
