@@ -1,0 +1,22 @@
+{
+  "name": "sims-pro",
+  "version": "1.0.0",
+  "description": "SIMS Pro – School Information Management System",
+  "private": true,
+  "scripts": {
+    "install:all":   "cd backend && npm install && cd ../frontend && npm install",
+    "db:generate":   "cd backend && npx prisma generate",
+    "db:migrate":    "cd backend && npx prisma migrate dev",
+    "db:seed":       "cd backend && npx ts-node --require tsconfig-paths/register prisma/seed/seed.ts",
+    "db:studio":     "cd backend && npx prisma studio",
+    "db:reset":      "cd backend && npx prisma migrate reset --force && npm run db:seed",
+    "dev:backend":   "cd backend && npm run start:dev",
+    "dev:frontend":  "cd frontend && npm run dev",
+    "build:backend": "cd backend && npm run build",
+    "build:frontend":"cd frontend && npm run build",
+    "docker:up":     "cd docker && docker compose up --build -d",
+    "docker:down":   "cd docker && docker compose down",
+    "docker:logs":   "cd docker && docker compose logs -f",
+    "docker:dev":    "cd docker && docker compose --profile dev up --build -d"
+  }
+}
