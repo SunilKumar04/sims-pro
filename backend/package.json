@@ -25,8 +25,8 @@
     "prisma:studio": "prisma studio",
     "prisma:seed": "ts-node --require tsconfig-paths/register prisma/seed/seed.ts",
     "setup": "npm run prisma:generate && npm run prisma:migrate && npm run prisma:seed",
-    "render-build": "npm run build && npm run prisma:migrate",
-    "render-start": "npm run start:prod"
+    "render-build": "npm install && npm run prisma:generate && npm run build",
+    "render-start": "npm run prisma:migrate && npm run start:prod"
   },
   "dependencies": {
     "@nestjs/common": "^10.3.0",
