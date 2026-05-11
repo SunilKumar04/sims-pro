@@ -260,6 +260,7 @@ sudo certbot --nginx -d yourdomain.com
    - Set `DATABASE_URL` to the Supavisor transaction pooler URL on port `6543` for app traffic
    - Set `DIRECT_URL` to a non-transaction-pooled URL for Prisma migrations, usually the Supavisor session pooler on port `5432`
    - Keep `sslmode=require` in both URLs
+   - If `DIRECT_URL` is temporarily missing, the deploy now falls back to `DATABASE_URL`, but that is only a fallback and not the recommended production setup
 
 ### Deploying Frontend to Vercel
 
