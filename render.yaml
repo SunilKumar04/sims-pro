@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: sims-backend
+    runtime: node
+    rootDir: backend
+    plan: free
+    buildCommand: npm run render-build
+    startCommand: npm run render-start
+    envVars:
+      - key: NODE_VERSION
+        value: 22.11.0

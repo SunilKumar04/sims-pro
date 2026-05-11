@@ -1,7 +1,7 @@
 #!/bin/sh
 set -e
 echo "🔄 Running Prisma migrations..."
-npx prisma migrate deploy
+npm run prisma:migrate
 echo "🌱 Seeding database (first run only)..."
 node -e "
 const { PrismaClient } = require('@prisma/client');
@@ -15,6 +15,6 @@ prisma.user.count().then(count => {
     process.exit(0);
   }
 }).finally(() => prisma.\$disconnect());
-" || npx ts-node --require tsconfig-paths/register prisma/seed/seed.ts || true
+" || npm run prisma:seed || true
 echo "🚀 Starting SIMS Backend..."
 exec "$@"

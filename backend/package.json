@@ -5,23 +5,28 @@
   "author": "GNPSS IT Team",
   "private": true,
   "license": "UNLICENSED",
+  "engines": {
+    "node": "22.x"
+  },
   "scripts": {
     "build": "nest build",
     "format": "prettier --write \"src/**/*.ts\"",
     "start": "nest start",
     "start:dev": "nest start --watch",
     "start:debug": "nest start --debug --watch",
-        "start:prod": "node dist/src/main.js",
+    "start:prod": "node dist/src/main.js",
     "lint": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
-    "prisma:generate": "prisma generate",
-    "prisma:migrate": "prisma migrate deploy",
+    "prisma:generate": "node ./node_modules/prisma/build/index.js generate",
+    "prisma:migrate": "node ./node_modules/prisma/build/index.js migrate deploy",
     "prisma:migrate:dev": "prisma migrate dev",
     "prisma:studio": "prisma studio",
     "prisma:seed": "ts-node --require tsconfig-paths/register prisma/seed/seed.ts",
-    "setup": "npm run prisma:generate && npm run prisma:migrate && npm run prisma:seed"
+    "setup": "npm run prisma:generate && npm run prisma:migrate && npm run prisma:seed",
+    "render-build": "npm run build && npm run prisma:migrate",
+    "render-start": "npm run start:prod"
   },
   "dependencies": {
     "@nestjs/common": "^10.3.0",
