@@ -261,6 +261,7 @@ sudo certbot --nginx -d yourdomain.com
    - Set `DIRECT_URL` to a non-transaction-pooled URL for Prisma migrations, usually the Supavisor session pooler on port `5432`
    - Keep `sslmode=require` in both URLs
    - If `DIRECT_URL` is temporarily missing, the deploy now falls back to `DATABASE_URL`, but that is only a fallback and not the recommended production setup
+   - Render startup now skips automatic migrations unless `DIRECT_URL` is set or `RUN_PRISMA_MIGRATIONS=true`, which avoids the service hanging before it opens a port
 
 ### Deploying Frontend to Vercel
 
