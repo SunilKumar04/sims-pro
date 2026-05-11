@@ -95,6 +95,7 @@ nano backend/.env
 Update these in `backend/.env`:
 ```env
 DATABASE_URL="postgresql://YOUR_USER:YOUR_PASSWORD@localhost:5432/sims_db"
+DIRECT_URL="postgresql://YOUR_USER:YOUR_PASSWORD@localhost:5432/sims_db"
 JWT_SECRET="your-minimum-32-character-secret-key-here"
 ```
 
@@ -253,8 +254,12 @@ sudo certbot --nginx -d yourdomain.com
 1. Connect your GitHub repo
 2. Set root directory to `backend`
 3. Build command: `npm install && npx prisma generate && npm run build`
-4. Start command: `node dist/main`
+4. Start command: `npm run render-start`
 5. Add environment variables from `.env.example`
+6. If you use Supabase on Render:
+   - Set `DATABASE_URL` to the Supavisor transaction pooler URL on port `6543` for app traffic
+   - Set `DIRECT_URL` to a non-transaction-pooled URL for Prisma migrations, usually the Supavisor session pooler on port `5432`
+   - Keep `sslmode=require` in both URLs
 
 ### Deploying Frontend to Vercel
 
