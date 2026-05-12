@@ -16,11 +16,21 @@ async function bootstrap() {
   const configService = app.get(ConfigService);
   const port = configService.get<number>('PORT', 4000);
 
-  // ✅ ENV based frontend URLs (comma separated support)
-  const clientUrls = configService
-    .get<string>('CLIENT_URL', 'http://localhost:3000')
-    .split(',')
-    .map((url) => url.trim());
+  // Frontend origins can be provided as a comma-separated allowlist.
+  const clientUrls = new Set(
+    configService
+      .get<string>('CLIENT_URL', '')
+      .split(',')
+      .map((url) => url.trim())
+      .filter(Boolean),
+  );
+  const defaultDevOrigins = [
+    'http://localhost:3000',
+    'http://127.0.0.1:3000',
+  ];
+  defaultDevOrigins.forEach((origin) => clientUrls.add(origin));
+  const clientUrlPattern = configService.get<string>('CLIENT_URL_PATTERN');
+  const clientUrlRegex = clientUrlPattern ? new RegExp(clientUrlPattern) : null;
 
   // ── Security ──
   app.use(helmet());
@@ -32,15 +42,16 @@ async function bootstrap() {
       // allow requests with no origin (mobile apps, postman)
       if (!origin) return callback(null, true);
 
-      if (clientUrls.includes(origin)) {
+      if (clientUrls.has(origin) || clientUrlRegex?.test(origin)) {
         callback(null, true);
       } else {
+        console.warn(`Blocked by CORS: ${origin}`);
         callback(new Error('Not allowed by CORS'));
       }
     },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'Origin'],
   });
 
   // ── Global Prefix & Versioning ──

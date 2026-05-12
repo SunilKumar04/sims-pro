@@ -273,6 +273,11 @@ npx vercel --prod
 Set environment variables in Vercel dashboard:
 - `NEXT_PUBLIC_API_URL` → your Railway/Render backend URL
 - `NEXTAUTH_SECRET` → random secure string
+- Example: `NEXT_PUBLIC_API_URL=https://sims-pro-1.onrender.com/api/v1`
+
+Set backend CORS variables in Render dashboard:
+- `CLIENT_URL=http://localhost:3000,http://127.0.0.1:3000,https://sims-pro-mocha.vercel.app`
+- Optional for Vercel previews: `CLIENT_URL_PATTERN=^https://.*\.vercel\.app$`
 
 ---
 
