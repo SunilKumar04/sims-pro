@@ -6,6 +6,7 @@ import { teachersApi } from '@/lib/api';
 import { cn } from '@/lib/utils';
 import { toast } from '@/components/ui/Toast';
 import { confirm } from '@/components/ui/Confirm';
+import ModalPortal from '@/components/ui/ModalPortal';
 
 const SUBJECTS = [
   'Mathematics','Physics','Chemistry','Biology','English',
@@ -402,10 +403,11 @@ export default function AdminTeachers() {
           ADD / EDIT MODAL
       ══════════════════════════ */}
       {(modal==='add'||modal==='edit') && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
-             style={{background:'rgba(0,0,0,0.75)',backdropFilter:'blur(8px)'}}>
-          <div className="w-full max-w-2xl rounded-3xl shadow-2xl"
-               style={{background:'#0F2044',border:'1px solid rgba(255,255,255,0.1)'}}>
+        <ModalPortal>
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
+               style={{background:'rgba(0,0,0,0.75)',backdropFilter:'blur(8px)'}}>
+            <div className="w-full max-w-2xl rounded-3xl shadow-2xl"
+                 style={{background:'#0F2044',border:'1px solid rgba(255,255,255,0.1)'}}>
 
             {/* Header */}
             <div className="flex items-center justify-between px-8 pt-7 pb-5">
@@ -495,8 +497,9 @@ export default function AdminTeachers() {
                 {saving?'⏳ Saving...':(modal==='add'?'+ Add Teacher':'✅ Save Changes')}
               </button>
             </div>
+            </div>
           </div>
-        </div>
+        </ModalPortal>
       )}
 
       {/* ══════════════════════════
@@ -509,10 +512,11 @@ export default function AdminTeachers() {
         const ss     = subjectStyle(selected.subject);
         const idx    = displayed.findIndex(t=>t.id===selected.id);
         return (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
-               style={{background:'rgba(0,0,0,0.75)',backdropFilter:'blur(8px)'}}>
-            <div className="w-full max-w-md rounded-3xl shadow-2xl overflow-hidden"
-                 style={{background:'#0F2044',border:'1px solid rgba(255,255,255,0.1)'}}>
+          <ModalPortal>
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
+                 style={{background:'rgba(0,0,0,0.75)',backdropFilter:'blur(8px)'}}>
+              <div className="w-full max-w-md rounded-3xl shadow-2xl overflow-hidden"
+                   style={{background:'#0F2044',border:'1px solid rgba(255,255,255,0.1)'}}>
 
               {/* Profile banner */}
               <div className="px-8 py-8 text-center" style={{background:'linear-gradient(160deg,#0F2044,#162952)'}}>
@@ -561,8 +565,9 @@ export default function AdminTeachers() {
                   ✏️ Edit Profile
                 </button>
               </div>
+              </div>
             </div>
-          </div>
+          </ModalPortal>
         );
       })()}
 

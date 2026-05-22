@@ -3,27 +3,58 @@
 import { useEffect, useState, useCallback } from 'react';
 import AppShell from '@/components/layout/AppShell';
 import { classesApi, teachersApi } from '@/lib/api';
-import { cn } from '@/lib/utils';
 import { toast } from '@/components/ui/Toast';
 import { confirm } from '@/components/ui/Confirm';
+import ModalPortal from '@/components/ui/ModalPortal';
 
-const GRADES   = ['12','11','10','9','8','7','6'];
+const GRADES   = ['Nursery','LKG','UKG','1','2','3','4','5','6','7','8','9','10','11','12'];
 const SECTIONS = ['A','B','C','D','E'];
 const ROOMS    = ['R-101','R-102','R-103','R-201','R-202','R-203','R-301','R-302','R-303','Lab-1','Lab-2','Hall-A'];
 const SUBJECTS = ['Mathematics','Physics','Chemistry','Biology','English','Hindi','History','Geography','Computer Science','Physical Education','Economics'];
 
-const GRADE_COLORS: Record<string, { bg: string; text: string; border: string }> = {
-  '12': { bg: 'rgba(239,68,68,0.12)',   text: '#FCA5A5', border: 'rgba(239,68,68,0.25)'   },
-  '11': { bg: 'rgba(249,115,22,0.12)',  text: '#FDBA74', border: 'rgba(249,115,22,0.25)'  },
-  '10': { bg: 'rgba(212,160,23,0.12)',  text: '#F0C040', border: 'rgba(212,160,23,0.25)'  },
-  '9':  { bg: 'rgba(34,197,94,0.12)',   text: '#86EFAC', border: 'rgba(34,197,94,0.25)'   },
-  '8':  { bg: 'rgba(30,144,255,0.12)',  text: '#93C5FD', border: 'rgba(30,144,255,0.25)'  },
-  '7':  { bg: 'rgba(99,102,241,0.12)',  text: '#C7D2FE', border: 'rgba(99,102,241,0.25)'  },
-  '6':  { bg: 'rgba(168,85,247,0.12)',  text: '#D8B4FE', border: 'rgba(168,85,247,0.25)'  },
-};
+const GRADE_COLORS = [
+  { bg: 'rgba(236,72,153,0.12)', text: '#F9A8D4', border: 'rgba(236,72,153,0.25)' },
+  { bg: 'rgba(244,114,182,0.12)', text: '#FBCFE8', border: 'rgba(244,114,182,0.25)' },
+  { bg: 'rgba(168,85,247,0.12)', text: '#D8B4FE', border: 'rgba(168,85,247,0.25)' },
+  { bg: 'rgba(99,102,241,0.12)', text: '#C7D2FE', border: 'rgba(99,102,241,0.25)' },
+  { bg: 'rgba(59,130,246,0.12)', text: '#BFDBFE', border: 'rgba(59,130,246,0.25)' },
+  { bg: 'rgba(14,165,233,0.12)', text: '#BAE6FD', border: 'rgba(14,165,233,0.25)' },
+  { bg: 'rgba(6,182,212,0.12)', text: '#A5F3FC', border: 'rgba(6,182,212,0.25)' },
+  { bg: 'rgba(20,184,166,0.12)', text: '#99F6E4', border: 'rgba(20,184,166,0.25)' },
+  { bg: 'rgba(34,197,94,0.12)', text: '#86EFAC', border: 'rgba(34,197,94,0.25)' },
+  { bg: 'rgba(132,204,22,0.12)', text: '#D9F99D', border: 'rgba(132,204,22,0.25)' },
+  { bg: 'rgba(234,179,8,0.12)', text: '#FDE68A', border: 'rgba(234,179,8,0.25)' },
+  { bg: 'rgba(249,115,22,0.12)', text: '#FDBA74', border: 'rgba(249,115,22,0.25)' },
+  { bg: 'rgba(212,160,23,0.12)', text: '#F0C040', border: 'rgba(212,160,23,0.25)' },
+  { bg: 'rgba(239,68,68,0.12)', text: '#FCA5A5', border: 'rgba(239,68,68,0.25)' },
+  { bg: 'rgba(190,24,93,0.12)', text: '#FDA4AF', border: 'rgba(190,24,93,0.25)' },
+] as const;
+
+function buildClassName(grade: string, section?: string) {
+  const safeGrade = String(grade || '').trim();
+  const safeSection = String(section || '').trim();
+  if (!safeGrade) return safeSection;
+  if (!safeSection) return safeGrade;
+  return /^\d+$/.test(safeGrade) ? `${safeGrade}${safeSection}` : `${safeGrade} ${safeSection}`;
+}
+
+function formatGradeLabel(grade: string) {
+  return /^\d+$/.test(String(grade || '')) ? `Grade ${grade}` : grade;
+}
+
+function sortClasses<T extends { grade?: string; section?: string; name?: string }>(list: T[]) {
+  return [...list].sort((a, b) => {
+    const gradeDiff = GRADES.indexOf(a.grade || '') - GRADES.indexOf(b.grade || '');
+    if (gradeDiff !== 0) return gradeDiff;
+    const sectionDiff = String(a.section || '').localeCompare(String(b.section || ''));
+    if (sectionDiff !== 0) return sectionDiff;
+    return String(a.name || '').localeCompare(String(b.name || ''));
+  });
+}
 
 function gradeStyle(grade: string) {
-  return GRADE_COLORS[grade] || { bg: 'rgba(255,255,255,0.08)', text: 'rgba(255,255,255,0.5)', border: 'rgba(255,255,255,0.12)' };
+  const index = GRADES.indexOf(grade);
+  return GRADE_COLORS[index] || { bg: 'rgba(255,255,255,0.08)', text: 'rgba(255,255,255,0.5)', border: 'rgba(255,255,255,0.12)' };
 }
 
 function getCapacity(students: number) {
@@ -43,20 +74,20 @@ export default function AdminClasses() {
   const [saving,    setSaving]    = useState(false);
   const [deleting,  setDeleting]  = useState<string|null>(null);
   const [form,      setForm]      = useState<any>({});
-  const [filterGrade, setFilterGrade] = useState('');
+  const [filterClass, setFilterClass] = useState('');
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
       const [clsRes, tchRes] = await Promise.all([
-        classesApi.getAll({ grade: filterGrade || undefined }),
+        classesApi.getAll({}),
         teachersApi.getAll({}),
       ]);
-      setClasses(clsRes.data.data || []);
+      setClasses(sortClasses(clsRes.data.data || []));
       setTeachers(tchRes.data.data || []);
     } catch { setClasses([]); }
     finally { setLoading(false); }
-  }, [filterGrade]);
+  }, []);
 
   useEffect(() => { load(); }, [load]);
 
@@ -64,7 +95,7 @@ export default function AdminClasses() {
 
   const openAdd = () => {
     setSelected(null);
-    setForm({ grade: '10', section: 'A', room: 'R-101', subject: 'Mathematics', studentCount: 30 });
+    setForm({ grade: 'Nursery', section: 'A', name: buildClassName('Nursery', 'A'), room: 'R-101', subject: 'Mathematics', studentCount: 30 });
     setModal('add');
   };
 
@@ -85,7 +116,7 @@ export default function AdminClasses() {
   const openView = (c: any) => { setSelected(c); setModal('view'); };
 
   const handleSave = async () => {
-    const name = form.name || `${form.grade}${form.section}`;
+    const name = String(form.name || buildClassName(form.grade, form.section)).trim();
     if (!name) { toast.warning('Validation', 'Class name or grade+section is required'); return; };
     setSaving(true);
     try {
@@ -107,19 +138,19 @@ export default function AdminClasses() {
 
   // Group classes by grade for the grid view
   const byGrade = GRADES.reduce((acc, g) => {
-    const filtered = classes.filter(c => c.grade === g || c.name?.startsWith(g));
+    const filtered = sortClasses(classes.filter(c => c.grade === g));
     if (filtered.length > 0) acc[g] = filtered;
     return acc;
   }, {} as Record<string, any[]>);
 
-  const displayed = filterGrade
-    ? classes.filter(c => c.grade === filterGrade || c.name?.startsWith(filterGrade))
+  const displayed = filterClass
+    ? classes.filter(c => c.name === filterClass)
     : classes;
 
   const totalStudents = classes.reduce((a, c) => a + (c.studentCount || 0), 0);
   const totalClasses  = classes.length;
   const avgClassSize  = totalClasses ? Math.round(totalStudents / totalClasses) : 0;
-  const teacherNames  = teachers.map(t => t.user?.name || t.name || '').filter(Boolean);
+  const teacherNames  = Array.from(new Set(teachers.map(t => t.user?.name || t.name || '').filter(Boolean)));
 
   return (
     <AppShell title="Classes & Sections" subtitle={`${totalClasses} active classes`}>
@@ -143,20 +174,19 @@ export default function AdminClasses() {
 
       {/* ── TOOLBAR ── */}
       <div className="glass rounded-2xl p-4 mb-5 flex items-center justify-between gap-4 flex-wrap">
-        <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-xs font-bold uppercase tracking-wider mr-1" style={{ color: 'rgba(255,255,255,0.4)' }}>Filter:</span>
-          {['', ...GRADES].map(g => (
-            <button key={g}
-                    onClick={() => setFilterGrade(g)}
-                    className="px-3 py-1.5 rounded-xl text-xs font-bold transition-all"
-                    style={{
-                      background: filterGrade === g ? (g ? gradeStyle(g).bg : 'rgba(212,160,23,0.2)') : 'rgba(255,255,255,0.04)',
-                      border: `1px solid ${filterGrade === g ? (g ? gradeStyle(g).border : 'rgba(212,160,23,0.4)') : 'rgba(255,255,255,0.08)'}`,
-                      color: filterGrade === g ? (g ? gradeStyle(g).text : '#F0C040') : 'rgba(255,255,255,0.45)',
-                    }}>
-              {g ? `Grade ${g}` : 'All Grades'}
-            </button>
-          ))}
+        <div>
+          <label className="block text-xs font-bold uppercase tracking-wider mb-2" style={{ color: 'rgba(255,255,255,0.4)' }}>
+            Classes
+          </label>
+          <select
+            value={filterClass}
+            onChange={e => setFilterClass(e.target.value)}
+            className="sims-input text-sm font-bold w-full sm:w-auto"
+            style={{ width: 176, minWidth: 176, padding: '10px 28px 10px 14px' }}
+          >
+            <option value="">All Classes</option>
+            {classes.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
+          </select>
         </div>
         <button onClick={openAdd}
                 className="px-5 py-2.5 rounded-xl text-sm font-black transition-all hover:-translate-y-0.5"
@@ -178,7 +208,7 @@ export default function AdminClasses() {
           <div className="text-5xl mb-4 opacity-40">🏫</div>
           <div className="text-lg font-bold mb-2">No classes found</div>
           <p className="text-sm mb-6" style={{ color: 'rgba(255,255,255,0.35)' }}>
-            {filterGrade ? `No classes for Grade ${filterGrade}` : 'Add your first class to get started'}
+            {filterClass ? `No details found for ${filterClass}` : 'Add your first class to get started'}
           </p>
           <button onClick={openAdd} className="px-6 py-2.5 rounded-xl text-sm font-bold"
                   style={{ background: 'linear-gradient(135deg,#D4A017,#F0C040)', color: '#0A1628' }}>
@@ -188,7 +218,7 @@ export default function AdminClasses() {
       )}
 
       {/* ── GRADE GROUPS (no filter) ── */}
-      {!loading && displayed.length > 0 && !filterGrade && (
+      {!loading && displayed.length > 0 && !filterClass && (
         <div className="space-y-6">
           {Object.entries(byGrade).map(([grade, gradeClasses]) => {
             const gs = gradeStyle(grade);
@@ -198,7 +228,7 @@ export default function AdminClasses() {
                 <div className="flex items-center gap-3 mb-3">
                   <div className="px-3 py-1 rounded-xl text-sm font-black"
                        style={{ background: gs.bg, color: gs.text, border: `1px solid ${gs.border}` }}>
-                    Grade {grade}
+                    {grade}
                   </div>
                   <div className="h-px flex-1" style={{ background: 'rgba(255,255,255,0.06)' }} />
                   <span className="text-xs" style={{ color: 'rgba(255,255,255,0.3)' }}>
@@ -219,10 +249,10 @@ export default function AdminClasses() {
       )}
 
       {/* ── FILTERED GRID ── */}
-      {!loading && displayed.length > 0 && filterGrade && (
+      {!loading && displayed.length > 0 && filterClass && (
         <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
           {displayed.map(c => {
-            const gs = gradeStyle(c.grade || filterGrade);
+            const gs = gradeStyle(c.grade || '');
             return <ClassCard key={c.id} cls={c} gs={gs}
               onEdit={openEdit} onView={openView} onDelete={handleDelete} deleting={deleting} />;
           })}
@@ -248,7 +278,10 @@ export default function AdminClasses() {
                   <div className="flex items-start justify-between gap-3">
                     <div>
                       <span className="px-2.5 py-1 rounded-lg text-sm font-black" style={{ background: gs.bg, color: gs.text }}>{c.name}</span>
-                      <div className="mt-2 text-xs text-white/35">Grade {c.grade} · Section {c.section}</div>
+                      <div className="mt-2 text-xs text-white/35">
+                        {formatGradeLabel(c.grade || '—')}
+                        {c.section ? ` · Section ${c.section}` : ''}
+                      </div>
                     </div>
                     <span className="text-xs px-2 py-0.5 rounded-lg font-mono flex-shrink-0"
                           style={{ background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.5)' }}>
@@ -308,7 +341,7 @@ export default function AdminClasses() {
                       </td>
                       <td>
                         <span className="text-xs font-bold px-2 py-0.5 rounded-lg"
-                              style={{ background: gs.bg, color: gs.text }}>Grade {c.grade}</span>
+                              style={{ background: gs.bg, color: gs.text }}>{formatGradeLabel(c.grade || '—')}</span>
                       </td>
                       <td className="font-bold text-white">{c.section}</td>
                       <td style={{ color: 'rgba(255,255,255,0.65)' }}>{c.teacherName || '—'}</td>
@@ -353,10 +386,11 @@ export default function AdminClasses() {
           ADD / EDIT MODAL
       ══════════════════════════ */}
       {(modal === 'add' || modal === 'edit') && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
-             style={{ background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(8px)' }}>
-          <div className="w-full max-w-xl rounded-3xl shadow-2xl"
-               style={{ background: '#0F2044', border: '1px solid rgba(255,255,255,0.1)' }}>
+        <ModalPortal>
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
+               style={{ background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(8px)' }}>
+            <div className="w-full max-w-xl rounded-3xl shadow-2xl"
+                 style={{ background: '#0F2044', border: '1px solid rgba(255,255,255,0.1)' }}>
 
             <div className="flex items-center justify-between px-8 pt-7 pb-5">
               <div>
@@ -380,27 +414,27 @@ export default function AdminClasses() {
                   <label className="block text-xs font-bold mb-1.5 uppercase tracking-wider" style={{ color: 'rgba(255,255,255,0.4)' }}>Grade *</label>
                   <select value={form.grade || ''} onChange={e => {
                     const g = e.target.value;
-                    const s = form.section || 'A';
-                    sf('grade', g); sf('name', `${g}${s}`);
+                    const s = form.section || '';
+                    sf('grade', g); sf('name', buildClassName(g, s));
                   }} className="sims-input">
                     <option value="">Select</option>
                     {GRADES.map(g => <option key={g} value={g}>{g}</option>)}
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs font-bold mb-1.5 uppercase tracking-wider" style={{ color: 'rgba(255,255,255,0.4)' }}>Section *</label>
+                  <label className="block text-xs font-bold mb-1.5 uppercase tracking-wider" style={{ color: 'rgba(255,255,255,0.4)' }}>Section</label>
                   <select value={form.section || ''} onChange={e => {
                     const s = e.target.value;
-                    sf('section', s); sf('name', `${form.grade || ''}${s}`);
+                    sf('section', s); sf('name', buildClassName(form.grade || '', s));
                   }} className="sims-input">
-                    <option value="">Select</option>
+                    <option value="">No section</option>
                     {SECTIONS.map(s => <option key={s} value={s}>{s}</option>)}
                   </select>
                 </div>
                 <div>
                   <label className="block text-xs font-bold mb-1.5 uppercase tracking-wider" style={{ color: 'rgba(255,255,255,0.4)' }}>Class Name</label>
                   <input value={form.name || ''} onChange={e => sf('name', e.target.value)}
-                         className="sims-input font-bold" placeholder="Auto: 10A" />
+                         className="sims-input font-bold" placeholder="Auto: Nursery A / 10A" />
                 </div>
               </div>
 
@@ -463,8 +497,9 @@ export default function AdminClasses() {
                 {saving ? '⏳ Saving...' : modal === 'add' ? '+ Create Class' : '✅ Save Changes'}
               </button>
             </div>
+            </div>
           </div>
-        </div>
+        </ModalPortal>
       )}
 
       {/* ══════════════════════════
@@ -474,10 +509,11 @@ export default function AdminClasses() {
         const gs  = gradeStyle(selected.grade || '');
         const cap = getCapacity(selected.studentCount || 0);
         return (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
-               style={{ background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(8px)' }}>
-            <div className="w-full max-w-md rounded-3xl shadow-2xl overflow-hidden"
-                 style={{ background: '#0F2044', border: '1px solid rgba(255,255,255,0.1)' }}>
+          <ModalPortal>
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
+                 style={{ background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(8px)' }}>
+              <div className="w-full max-w-md rounded-3xl shadow-2xl overflow-hidden"
+                   style={{ background: '#0F2044', border: '1px solid rgba(255,255,255,0.1)' }}>
 
               {/* Banner */}
               <div className="px-8 py-8 text-center" style={{ background: 'linear-gradient(160deg,#0F2044,#162952)' }}>
@@ -485,7 +521,10 @@ export default function AdminClasses() {
                      style={{ background: gs.bg, border: `2px solid ${gs.border}`, color: gs.text }}>
                   {selected.name}
                 </div>
-                <p className="text-base font-black text-white mt-1">Grade {selected.grade} — Section {selected.section}</p>
+                <p className="text-base font-black text-white mt-1">
+                  {formatGradeLabel(selected.grade || '—')}
+                  {selected.section ? ` — Section ${selected.section}` : ''}
+                </p>
                 <p className="text-xs mt-1" style={{ color: 'rgba(255,255,255,0.4)' }}>{selected.room}</p>
               </div>
 
@@ -525,8 +564,9 @@ export default function AdminClasses() {
                   ✏️ Edit Class
                 </button>
               </div>
+              </div>
             </div>
-          </div>
+          </ModalPortal>
         );
       })()}
     </AppShell>
