@@ -7,13 +7,21 @@ import { toast } from '@/components/ui/Toast';
 import { getUser } from '@/lib/auth';
 
 const DEFAULT_FEE = [
-  { grade:'12', tuition:18000, transport:2000, lab:1000, sports:500 },
-  { grade:'11', tuition:18000, transport:2000, lab:1000, sports:500 },
-  { grade:'10', tuition:15000, transport:2000, lab:1000, sports:500 },
-  { grade:'9',  tuition:13500, transport:2000, lab:500,  sports:500 },
-  { grade:'8',  tuition:12000, transport:2000, lab:500,  sports:500 },
-  { grade:'7',  tuition:11000, transport:2000, lab:500,  sports:500 },
+  { grade:'Nursery', tuition:6000,  transport:1500, lab:0,    sports:300 },
+  { grade:'LKG',     tuition:6500,  transport:1500, lab:0,    sports:300 },
+  { grade:'UKG',     tuition:7000,  transport:1500, lab:0,    sports:300 },
+  { grade:'1',       tuition:7500,  transport:1500, lab:0,    sports:300 },
+  { grade:'2',       tuition:8000,  transport:1500, lab:0,    sports:300 },
+  { grade:'3',       tuition:8500,  transport:1500, lab:0,    sports:350 },
+  { grade:'4',       tuition:9000,  transport:1750, lab:0,    sports:350 },
+  { grade:'5',       tuition:9500,  transport:1750, lab:0,    sports:400 },
   { grade:'6',  tuition:10000, transport:2000, lab:500,  sports:500 },
+  { grade:'7',  tuition:11000, transport:2000, lab:500,  sports:500 },
+  { grade:'8',  tuition:12000, transport:2000, lab:500,  sports:500 },
+  { grade:'9',  tuition:13500, transport:2000, lab:500,  sports:500 },
+  { grade:'10', tuition:15000, transport:2000, lab:1000, sports:500 },
+  { grade:'11', tuition:18000, transport:2000, lab:1000, sports:500 },
+  { grade:'12', tuition:18000, transport:2000, lab:1000, sports:500 },
 ];
 
 function Toggle({ on, onChange }: { on: boolean; onChange: (v: boolean) => void }) {

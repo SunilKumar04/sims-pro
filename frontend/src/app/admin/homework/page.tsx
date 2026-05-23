@@ -2,11 +2,10 @@
 // src/app/admin/homework/page.tsx
 import { useEffect, useState, useCallback } from 'react';
 import AppShell from '@/components/layout/AppShell';
-import { homeworkApi, teachersApi } from '@/lib/api';
+import { classesApi, homeworkApi, teachersApi } from '@/lib/api';
 import { toast } from '@/components/ui/Toast';
 import { confirm } from '@/components/ui/Confirm';
 
-const CLASSES  = ['10A','10B','9A','9B','8A','8B','7A','7B'];
 const SUBJECTS = ['Mathematics','Physics','Chemistry','Biology','English','Hindi','History','Geography','Computer Science','Physical Education'];
 
 const SUBJECT_COLORS: Record<string,{bg:string;text:string}> = {
@@ -26,6 +25,7 @@ type ModalMode = 'add'|'edit'|'view'|null;
 
 export default function AdminHomework() {
   const [hw,        setHw]        = useState<any[]>([]);
+  const [classes,   setClasses]   = useState<{ id: string; name: string }[]>([]);
   const [teachers,  setTeachers]  = useState<any[]>([]);
   const [loading,   setLoading]   = useState(true);
   const [modal,     setModal]     = useState<ModalMode>(null);
@@ -40,13 +40,18 @@ export default function AdminHomework() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const [hwRes, tchRes] = await Promise.all([
+      const [hwRes, tchRes, clsRes] = await Promise.all([
         homeworkApi.getAll({ className: filterCls||undefined, subject: filterSub||undefined }),
         teachersApi.getAll({}),
+        classesApi.getAll({}),
       ]);
       setHw(hwRes.data.data || []);
       setTeachers(tchRes.data.data || []);
-    } catch { setHw([]); }
+      setClasses(clsRes.data.data || []);
+    } catch {
+      setHw([]);
+      setClasses([]);
+    }
     finally { setLoading(false); }
   }, [filterCls, filterSub]);
 
@@ -56,7 +61,7 @@ export default function AdminHomework() {
 
   const openAdd = () => {
     setSelected(null);
-    setForm({ subject:'Mathematics', className:'10A' });
+    setForm({ subject:'Mathematics', className: filterCls || classes[0]?.name || '' });
     setModal('add');
   };
   const openEdit = (h:any) => {
@@ -98,7 +103,7 @@ export default function AdminHomework() {
 
   const overdue   = displayed.filter(h => new Date(h.dueDate) < new Date());
   const upcoming  = displayed.filter(h => new Date(h.dueDate) >= new Date());
-  const classes   = [...new Set(hw.map(h => h.className))].filter(Boolean);
+  const coveredClasses = [...new Set(hw.map(h => h.className))].filter(Boolean);
   const subjects  = [...new Set(hw.map(h => h.subject))].filter(Boolean);
 
   function HWCard({ h }: { h:any }) {
@@ -157,7 +162,7 @@ export default function AdminHomework() {
           {icon:'📚',label:'Total Assigned',  value:hw.length,        col:'#F0C040',bg:'rgba(212,160,23,0.12)',bd:'rgba(212,160,23,0.2)'},
           {icon:'⏳',label:'Due This Week',   value:upcoming.filter(h=>{const d=Math.ceil((new Date(h.dueDate).getTime()-Date.now())/(1000*60*60*24));return d>=0&&d<=7;}).length, col:'#93C5FD',bg:'rgba(30,144,255,0.12)',bd:'rgba(30,144,255,0.2)'},
           {icon:'⚠️',label:'Overdue',         value:overdue.length,   col:'#FCA5A5',bg:'rgba(239,68,68,0.12)',bd:'rgba(239,68,68,0.2)'},
-          {icon:'🏫',label:'Classes Covered', value:classes.length,   col:'#86EFAC',bg:'rgba(34,197,94,0.12)',bd:'rgba(34,197,94,0.2)'},
+          {icon:'🏫',label:'Classes Covered', value:coveredClasses.length,   col:'#86EFAC',bg:'rgba(34,197,94,0.12)',bd:'rgba(34,197,94,0.2)'},
         ].map(c=>(
           <div key={c.label} className="glass rounded-2xl p-5 hover:-translate-y-0.5 transition-transform">
             <div className="w-10 h-10 rounded-xl flex items-center justify-center text-xl mb-3" style={{background:c.bg,border:`1px solid ${c.bd}`}}>{c.icon}</div>
@@ -182,7 +187,7 @@ export default function AdminHomework() {
           <select value={filterCls} onChange={e=>setFilterCls(e.target.value)}
                   className="sims-input text-sm" style={{width:130,padding:'8px 28px 8px 12px'}}>
             <option value="">All Classes</option>
-            {CLASSES.map(c=><option key={c} value={c}>{c}</option>)}
+            {classes.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
           </select>
           {/* Subject filter */}
           <select value={filterSub} onChange={e=>setFilterSub(e.target.value)}
@@ -285,7 +290,8 @@ export default function AdminHomework() {
                 <div>
                   <label className="block text-xs font-bold mb-1.5 uppercase tracking-wider" style={{color:'rgba(255,255,255,0.4)'}}>Class *</label>
                   <select value={form.className||''} onChange={e=>sf('className',e.target.value)} className="sims-input">
-                    {CLASSES.map(c=><option key={c} value={c}>{c}</option>)}
+                    <option value="">Select class</option>
+                    {classes.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
                   </select>
                 </div>
               </div>

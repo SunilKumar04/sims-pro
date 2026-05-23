@@ -2,7 +2,7 @@
 // src/app/admin/students/page.tsx
 import { useEffect, useState, useCallback } from 'react';
 import AppShell from '@/components/layout/AppShell';
-import { studentsApi } from '@/lib/api';
+import { classesApi, studentsApi } from '@/lib/api';
 import { toast } from '@/components/ui/Toast';
 import { cn } from '@/lib/utils';
 import { confirm } from '@/components/ui/Confirm';
@@ -13,10 +13,10 @@ const FEE_BADGE: Record<FeeStatus, string> = {
   PENDING: 'bg-red-500/15 text-red-400',
   PARTIAL: 'bg-yellow-500/15 text-yellow-400',
 };
-const CLASSES = ['10A','10B','9A','9B','8A','8B','7A','7B','6A','6B'];
 
 export default function AdminStudents() {
   const [students, setStudents]   = useState<any[]>([]);
+  const [classes,  setClasses]    = useState<{ id: string; name: string }[]>([]);
   const [loading,  setLoading]    = useState(true);
   const [modal,    setModal]      = useState<'add'|'edit'|null>(null);
   const [selected, setSelected]   = useState<any>(null);
@@ -30,15 +30,20 @@ export default function AdminStudents() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await studentsApi.getAll({
-        className: filterCls || undefined,
-        search:    search    || undefined,
-      });
-      setStudents(res.data.data || []);
-      setMeta(res.data.meta || {});
+      const [studentsRes, classesRes] = await Promise.all([
+        studentsApi.getAll({
+          className: filterCls || undefined,
+          search:    search    || undefined,
+        }),
+        classesApi.getAll({}),
+      ]);
+      setStudents(studentsRes.data.data || []);
+      setMeta(studentsRes.data.meta || {});
+      setClasses(classesRes.data.data || []);
     } catch (e: any) {
       toast.error('Failed to load students', e?.message);
       setStudents([]);
+      setClasses([]);
     } finally { setLoading(false); }
   }, [filterCls, search]);
 
@@ -47,7 +52,7 @@ export default function AdminStudents() {
   const f = (k: string, v: any) => setForm((p: any) => ({ ...p, [k]: v }));
 
   const openAdd = () => {
-    setForm({ className: '10A', phone: '', parentPhone: '' });
+    setForm({ className: filterCls || classes[0]?.name || '', phone: '', parentPhone: '' });
     setSelected(null);
     setModal('add');
   };
@@ -152,7 +157,7 @@ export default function AdminStudents() {
             <select value={filterCls} onChange={e=>setFilterCls(e.target.value)}
                     className="sims-input text-sm w-full sm:w-auto" style={{width:140,padding:'8px 28px 8px 12px'}}>
               <option value="">All Classes</option>
-              {CLASSES.map(c=><option key={c} value={c}>{c}</option>)}
+              {classes.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
             </select>
           </div>
           <button onClick={openAdd}
@@ -317,7 +322,7 @@ export default function AdminStudents() {
                   <label className="block text-xs font-bold mb-1.5 uppercase tracking-wider" style={{color:'rgba(255,255,255,0.45)'}}>Class *</label>
                   <select value={form.className||''} onChange={e=>f('className',e.target.value)} className="sims-input">
                     <option value="">Select Class</option>
-                    {CLASSES.map(c=><option key={c} value={c}>{c}</option>)}
+                    {classes.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
                   </select>
                 </div>
                 <div>
