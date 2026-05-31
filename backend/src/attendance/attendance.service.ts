@@ -1,25 +1,37 @@
 // src/attendance/attendance.service.ts
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { AttendanceStatus } from '@prisma/client';
+import { TenantContextService } from '../tenancy/tenant-context.service';
 
 @Injectable()
 export class AttendanceService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private readonly tenant: TenantContextService,
+  ) {}
+
+  private getSchoolId() {
+    const schoolId = this.tenant.get().schoolId;
+    if (!schoolId) throw new ForbiddenException('School tenant not found');
+    return schoolId;
+  }
 
   private async resolveTeacherId(raw: string): Promise<string> {
-    const direct = await this.prisma.teacher.findUnique({ where: { id: raw } });
+    const schoolId = this.getSchoolId();
+    const direct = await this.prisma.teacher.findFirst({ where: { id: raw, schoolId } });
     if (direct) return direct.id;
-    const byUser = await this.prisma.teacher.findUnique({ where: { userId: raw } });
+    const byUser = await this.prisma.teacher.findFirst({ where: { userId: raw, schoolId } });
     if (byUser) return byUser.id;
-    const first = await this.prisma.teacher.findFirst();
+    const first = await this.prisma.teacher.findFirst({ where: { schoolId } });
     return first?.id ?? raw;
   }
 
   private async resolveStudentId(raw: string): Promise<string> {
-    const direct = await this.prisma.student.findUnique({ where: { id: raw } });
+    const schoolId = this.getSchoolId();
+    const direct = await this.prisma.student.findFirst({ where: { id: raw, schoolId } });
     if (direct) return direct.id;
-    const byUser = await this.prisma.student.findUnique({ where: { userId: raw } });
+    const byUser = await this.prisma.student.findFirst({ where: { userId: raw, schoolId } });
     return byUser?.id ?? raw;
   }
 
@@ -29,15 +41,17 @@ export class AttendanceService {
     teacherId: string;
     records: { studentId: string; status: string; remark?: string }[];
   }) {
+    const schoolId = this.getSchoolId();
     const date      = new Date(dto.date);
     const teacherId = await this.resolveTeacherId(dto.teacherId);
     const results   = [];
 
     for (const rec of dto.records) {
+      const studentId = await this.resolveStudentId(rec.studentId);
       const att = await this.prisma.attendance.upsert({
-        where:  { studentId_date: { studentId: rec.studentId, date } },
-        update: { status: rec.status as AttendanceStatus, remark: rec.remark ?? '', teacherId },
-        create: { studentId: rec.studentId, teacherId, date, status: rec.status as AttendanceStatus, remark: rec.remark ?? '' },
+        where:  { schoolId_studentId_date: { schoolId, studentId, date } },
+        update: { status: rec.status as AttendanceStatus, remark: rec.remark ?? '', teacherId, schoolId },
+        create: { studentId, teacherId, schoolId, date, status: rec.status as AttendanceStatus, remark: rec.remark ?? '' },
       });
       results.push(att);
     }
@@ -45,10 +59,11 @@ export class AttendanceService {
   }
 
   async getByClass(className: string, date: string) {
+    const schoolId = this.getSchoolId();
     const targetDate = new Date(date);
 
     const students = await this.prisma.student.findMany({
-      where:   { className },
+      where:   { className, schoolId },
       include: {
         user:       { select: { name: true } },
         attendance: { where: { date: targetDate }, take: 1 },
@@ -77,6 +92,7 @@ export class AttendanceService {
   }
 
   async getStudentAttendance(rawStudentId: string, month?: number, year?: number) {
+    const schoolId = this.getSchoolId();
     const studentId = await this.resolveStudentId(rawStudentId);
     const now = new Date();
     const m   = Number(month) || now.getMonth() + 1;
@@ -86,7 +102,7 @@ export class AttendanceService {
     const endDate   = new Date(y, m, 0);
 
     const records = await this.prisma.attendance.findMany({
-      where:   { studentId, date: { gte: startDate, lte: endDate } },
+      where:   { studentId, schoolId, date: { gte: startDate, lte: endDate } },
       orderBy: { date: 'asc' },
     });
 
@@ -102,8 +118,9 @@ export class AttendanceService {
   }
 
   async getClassSummary(className: string) {
+    const schoolId = this.getSchoolId();
     const students = await this.prisma.student.findMany({
-      where:   { className },
+      where:   { className, schoolId },
       include: {
         user:       { select: { name: true } },
         attendance: { orderBy: { date: 'desc' } },

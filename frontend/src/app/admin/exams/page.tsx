@@ -527,7 +527,7 @@ export default function AdminExams() {
               </div>
               <div>
                 <label className="block text-xs font-bold mb-1.5 uppercase tracking-wider text-white/40">Title *</label>
-                <input value={examForm.title} onChange={e => ef('title',e.target.value)} className="sims-input" placeholder="e.g. MST 1 — November 2024"/>
+                <input value={examForm.title} onChange={e => ef('title',e.target.value)} className="sims-input" placeholder="e.g. Mid-Term Exam"/>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>

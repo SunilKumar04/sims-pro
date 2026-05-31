@@ -31,7 +31,9 @@ api.interceptors.response.use(
       if (typeof window !== 'undefined') {
         localStorage.removeItem('sims_token');
         localStorage.removeItem('sims_user');
-        window.location.href = '/login';
+        window.location.href = window.location.pathname.startsWith('/superadmin')
+          ? '/superadmin/login'
+          : '/login';
       }
     }
     return Promise.reject(error.response?.data || error);
@@ -43,11 +45,39 @@ api.interceptors.response.use(
 // ══════════════════════════════════════
 export const authApi = {
   login:          (email: string, password: string) => api.post('/auth/login', { email, password }),
+  superAdminLogin: (email: string, password: string) => api.post('/superadmin/auth/login', { email, password }),
   register:       (data: any)                        => api.post('/auth/register', data),
   getMe:          ()                                 => api.get('/auth/me'),
+  getSchool:      ()                                 => api.get('/auth/school'),
+  updateSchool:   (data: any)                        => api.patch('/auth/school', data),
   changePassword: (data: any)                        => api.patch('/auth/change-password', data),
   forgotPassword: (email: string)                    => api.post('/auth/forgot-password', { email }),
   resetPassword:  (token: string, newPassword: string) => api.post('/auth/reset-password', { token, newPassword }),
+};
+
+// ══════════════════════════════════════
+// SUPER ADMIN
+// ══════════════════════════════════════
+export const superAdminApi = {
+  dashboard: () => api.get('/superadmin/dashboard'),
+  analytics: () => api.get('/superadmin/analytics'),
+  schools: () => api.get('/superadmin/schools'),
+  getSchool: (id: string) => api.get(`/superadmin/schools/${id}`),
+  schoolAdmins: (schoolId: string) => api.get(`/superadmin/schools/${schoolId}/admins`),
+  plans: () => api.get('/superadmin/plans'),
+  subscriptions: () => api.get('/superadmin/subscriptions'),
+  createSchool: (data: any) => api.post('/superadmin/schools', data),
+  updateSchool: (id: string, data: any) => api.patch(`/superadmin/schools/${id}`, data),
+  activateSchool: (id: string) => api.patch(`/superadmin/schools/${id}/activate`),
+  suspendSchool: (id: string) => api.patch(`/superadmin/schools/${id}/suspend`),
+  deleteSchool: (id: string) => api.delete(`/superadmin/schools/${id}`),
+  createSchoolAdmin: (schoolId: string, data: any) => api.post(`/superadmin/schools/${schoolId}/admins`, data),
+  resetSchoolAdminPassword: (userId: string, password: string) =>
+    api.patch(`/superadmin/school-admins/${userId}/password`, { password }),
+  setSchoolAdminStatus: (userId: string, isActive: boolean) =>
+    api.patch(`/superadmin/school-admins/${userId}/status`, { isActive }),
+  createPlan: (data: any) => api.post('/superadmin/plans', data),
+  updatePlan: (id: string, data: any) => api.patch(`/superadmin/plans/${id}`, data),
 };
 
 // ══════════════════════════════════════

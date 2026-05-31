@@ -7,6 +7,10 @@ import { formatCurrency, formatDate, cn } from '@/lib/utils';
 import { toast } from '@/components/ui/Toast';
 import { confirm } from '@/components/ui/Confirm';
 
+const SCHOOL_NAME = process.env.NEXT_PUBLIC_SCHOOL_NAME || 'Your School Name';
+const SCHOOL_LOCATION = process.env.NEXT_PUBLIC_SCHOOL_CITY || 'City, State';
+const SCHOOL_BOARD = process.env.NEXT_PUBLIC_SCHOOL_BOARD || 'Affiliated School';
+
 const STATUS_BADGE: Record<string, string> = {
   PAID:    'bg-green-500/15 text-green-400',
   PENDING: 'bg-red-500/15 text-red-400',
@@ -136,8 +140,8 @@ export default function AdminFees() {
             </div>
             <div className="text-center pb-5 mb-5" style={{ borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
               <div className="text-4xl mb-2">🎓</div>
-              <div className="text-lg font-black">Guru Nanak Public Sr. Sec. School</div>
-              <div className="text-xs mt-1 text-white/40">Ludhiana, Punjab · CBSE Affiliated</div>
+              <div className="text-lg font-black">{SCHOOL_NAME}</div>
+              <div className="text-xs mt-1 text-white/40">{SCHOOL_LOCATION} · {SCHOOL_BOARD}</div>
               <div className="text-xs mt-1 font-bold text-yellow-400">OFFICIAL FEE RECEIPT</div>
             </div>
             {[

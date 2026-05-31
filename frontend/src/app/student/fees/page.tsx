@@ -7,6 +7,10 @@ import { getUser } from '@/lib/auth';
 import { formatCurrency } from '@/lib/utils';
 import { toast } from '@/components/ui/Toast';
 
+const SCHOOL_NAME = process.env.NEXT_PUBLIC_SCHOOL_NAME || 'Your School Name';
+const SCHOOL_LOCATION = process.env.NEXT_PUBLIC_SCHOOL_CITY || 'City, State';
+const SCHOOL_BOARD = process.env.NEXT_PUBLIC_SCHOOL_BOARD || 'Affiliated School';
+
 export default function StudentFees() {
   const [feeData,  setFeeData]  = useState<any[]>([]);
   const [loading,  setLoading]  = useState(true);
@@ -18,12 +22,7 @@ export default function StudentFees() {
     feesApi.getByStudent(user?.id)
       .then(r => setFeeData(r.data.data||[]))
       .catch(() => {
-        // Demo fallback
-        setFeeData([{
-          id:'demo-1', term:'Term 1 – 2024', amount:15000, paid:15000,
-          status:'PAID', paidDate:'2024-01-10', receiptNo:'REC-2024-S001',
-          tuition:12000, transport:2000, lab:1000, sports:500,
-        }]);
+        setFeeData([]);
       })
       .finally(()=>setLoading(false));
   }, []);
@@ -38,6 +37,20 @@ export default function StudentFees() {
   const fc = feeColors[feeStatus]||feeColors.PENDING;
 
   if (loading) return <AppShell title="My Fees" subtitle="Fee status & payment"><div className="skeleton h-96 rounded-2xl"/></AppShell>;
+
+  if (!latest) {
+    return (
+      <AppShell title="My Fees" subtitle="Fee status & payment history">
+        <div className="glass rounded-2xl p-8 text-center">
+          <div className="text-4xl mb-3">💰</div>
+          <div className="text-lg font-black text-white">No fee records found</div>
+          <p className="mt-2 text-sm" style={{color:'rgba(255,255,255,0.5)'}}>
+            Fee entries will appear here once the school creates them for your account.
+          </p>
+        </div>
+      </AppShell>
+    );
+  }
 
   return (
     <AppShell title="My Fees" subtitle="Fee status & payment history">
@@ -63,7 +76,7 @@ export default function StudentFees() {
         </div>
         {feeStatus!=='PAID' && (
           <button
-            onClick={()=>toast.info('💳 Online Payment Coming Soon', 'Please pay at the school accounts office. Account: GNPSS-2024 · IFSC: SBIN0001234')}
+            onClick={()=>toast.info('💳 Online Payment Coming Soon', 'Please pay at the school accounts office or wait for online payment to be enabled.')}
             className="w-full px-6 py-3 rounded-xl text-sm font-black transition-all hover:-translate-y-0.5 flex-shrink-0 sm:w-auto"
             style={{background:'linear-gradient(135deg,#D4A017,#F0C040)',color:'#0A1628'}}>
             💳 Pay Now
@@ -218,8 +231,8 @@ export default function StudentFees() {
                style={{background:'#0F2044',border:'1px solid rgba(255,255,255,0.1)'}}>
             <div className="text-center px-5 py-6 sm:px-8 sm:py-7" style={{background:'linear-gradient(160deg,#0F2044,#162952)',borderBottom:'1px solid rgba(255,255,255,0.07)'}}>
               <div className="text-4xl mb-2">🎓</div>
-              <div className="text-lg font-black text-white">Guru Nanak Public Sr. Sec. School</div>
-              <div className="text-xs mt-1" style={{color:'rgba(255,255,255,0.4)'}}>Ludhiana, Punjab · CBSE Affiliated</div>
+              <div className="text-lg font-black text-white">{SCHOOL_NAME}</div>
+              <div className="text-xs mt-1" style={{color:'rgba(255,255,255,0.4)'}}>{SCHOOL_LOCATION} · {SCHOOL_BOARD}</div>
               <div className="text-xs font-black mt-2 text-yellow-400 uppercase tracking-wider">Official Fee Receipt</div>
             </div>
             <div className="px-5 py-5 space-y-2 sm:px-8">

@@ -13,6 +13,7 @@ import {
 const COLORS = ['#22C55E', '#EF4444', '#F59E0B'];
 
 export default function AdminDashboard() {
+  const currentYear = new Date().getFullYear();
   const [stats,   setStats]   = useState<any>(null);
   const [notices, setNotices] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -47,7 +48,7 @@ export default function AdminDashboard() {
     { icon: '👨‍🎓', label: 'Total Students',    value: stats?.overview?.students || 0, color: 'gold',  change: '↑ +3 this month', changeType: 'up',   href: '/admin/students' },
     { icon: '👩‍🏫', label: 'Faculty Members',   value: stats?.overview?.teachers || 0, color: 'blue',  change: '↑ Active',        changeType: 'up',   href: '/admin/teachers' },
     { icon: '💰', label: 'Fees Collected',    value: formatCurrency(stats?.fees?.totalCollected || 0), color: 'green', change: `↑ ${stats?.fees?.collectionRate || 0}% rate`, changeType: 'up', href: '/admin/fees' },
-    { icon: '🏫', label: 'Active Classes',    value: stats?.overview?.classes || 0,  color: 'red',   change: 'Across 3 grades',  changeType: 'neutral', href: '/admin/classes' },
+    { icon: '🏫', label: 'Active Classes',    value: stats?.overview?.classes || 0,  color: 'red',   change: 'Across all classes', changeType: 'neutral', href: '/admin/classes' },
   ];
 
   const colorMap: Record<string, any> = {
@@ -97,7 +98,7 @@ export default function AdminDashboard() {
               <h3 className="text-base font-bold">Monthly Fee Collection</h3>
               <p className="text-xs mt-0.5" style={{ color: 'rgba(255,255,255,0.4)' }}>Current year performance</p>
             </div>
-            <span className="px-3 py-1 rounded-full text-xs font-bold" style={{ background: 'rgba(212,160,23,0.15)', color: '#F0C040' }}>2024</span>
+            <span className="px-3 py-1 rounded-full text-xs font-bold" style={{ background: 'rgba(212,160,23,0.15)', color: '#F0C040' }}>{currentYear}</span>
           </div>
           <ResponsiveContainer width="100%" height={220}>
             <BarChart data={stats?.monthlyFees || []} barSize={22}>

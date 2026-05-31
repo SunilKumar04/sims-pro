@@ -38,22 +38,46 @@ function Toggle({ on, onChange }: { on: boolean; onChange: (v: boolean) => void 
 
 type Tab = 'school' | 'fees' | 'prefs' | 'security';
 
+const EMPTY_SCHOOL = {
+  name: '',
+  short: '',
+  principal: '',
+  email: '',
+  phone: '',
+  address: '',
+  cbseCode: '',
+  estd: '',
+  board: '',
+};
+
+const schoolStorageKey = (schoolId?: string) => `sims_school_${schoolId || 'default'}`;
+const feesStorageKey = (schoolId?: string) => `sims_fees_${schoolId || 'default'}`;
+const prefsStorageKey = (schoolId?: string) => `sims_prefs_${schoolId || 'default'}`;
+
+const mapSchoolProfile = (data: any) => {
+  const school = data?.school ?? {};
+  const settings = data?.settings ?? {};
+  return {
+    name: school.name ?? '',
+    short: settings.short ?? school.schoolCode ?? '',
+    principal: school.contactPerson ?? '',
+    email: school.email ?? '',
+    phone: school.phone ?? '',
+    address: school.address ?? '',
+    cbseCode: settings.cbseCode ?? school.schoolCode ?? '',
+    estd: settings.estd ?? '',
+    board: settings.board ?? '',
+  };
+};
+
 export default function AdminSettings() {
   const user = getUser();
   const [tab, setTab] = useState<Tab>('school');
+  const [schoolId, setSchoolId] = useState(user?.schoolId || '');
+  const [loadingSchool, setLoadingSchool] = useState(true);
 
   // ── School info ──
-  const [school, setSchool] = useState({
-    name:     'Guru Nanak Public Senior Secondary School',
-    short:    'GNPSS',
-    principal:'Dr. R.K. Sharma',
-    email:    'principal@gnpss.edu.in',
-    phone:    '+91-161-2345678',
-    address:  'Civil Lines, Ludhiana, Punjab – 141001',
-    cbseCode: '1630247',
-    estd:     '1985',
-    board:    'CBSE, New Delhi',
-  });
+  const [school, setSchool] = useState(EMPTY_SCHOOL);
   const [savingSchool, setSavingSchool] = useState(false);
 
   // ── Fee structure ──
@@ -78,32 +102,41 @@ export default function AdminSettings() {
 
   const saveSchool = async () => {
     setSavingSchool(true);
-    await new Promise(r => setTimeout(r, 600)); // persist to localStorage for demo
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('sims_school', JSON.stringify(school));
+    try {
+      await authApi.updateSchool(school);
+      if (typeof window !== 'undefined') {
+        localStorage.setItem(schoolStorageKey(schoolId), JSON.stringify(school));
+      }
+      toast.success('School Info Saved', 'Your school details have been updated');
+    } catch (error: any) {
+      toast.error('Save Failed', error?.message || 'Unable to save school details');
+    } finally {
+      setSavingSchool(false);
     }
-    setSavingSchool(false);
-    toast.success('School Info Saved', 'Your school details have been updated');
   };
 
   const saveFees = async () => {
     setSavingFees(true);
-    await new Promise(r => setTimeout(r, 600));
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('sims_fees', JSON.stringify(fees));
+    try {
+      if (typeof window !== 'undefined') {
+        localStorage.setItem(feesStorageKey(schoolId), JSON.stringify(fees));
+      }
+      toast.success('Fee Structure Saved', 'Fee amounts updated for all grades');
+    } finally {
+      setSavingFees(false);
     }
-    setSavingFees(false);
-    toast.success('Fee Structure Saved', 'Fee amounts updated for all grades');
   };
 
   const savePrefs = async () => {
     setSavingPrefs(true);
-    await new Promise(r => setTimeout(r, 600));
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('sims_prefs', JSON.stringify(prefs));
+    try {
+      if (typeof window !== 'undefined') {
+        localStorage.setItem(prefsStorageKey(schoolId), JSON.stringify(prefs));
+      }
+      toast.success('Preferences Saved', 'System settings have been updated');
+    } finally {
+      setSavingPrefs(false);
     }
-    setSavingPrefs(false);
-    toast.success('Preferences Saved', 'System settings have been updated');
   };
 
   const changePassword = async () => {
@@ -125,16 +158,36 @@ export default function AdminSettings() {
     } finally { setSavingPw(false); }
   };
 
-  // Load persisted data
+  // Load school-scoped data
   useEffect(() => {
-    if (typeof window === 'undefined') return;
-    const s = localStorage.getItem('sims_school');
-    const f = localStorage.getItem('sims_fees');
-    const p = localStorage.getItem('sims_prefs');
-    if (s) try { setSchool(JSON.parse(s)); } catch {}
-    if (f) try { setFees(JSON.parse(f)); } catch {}
-    if (p) try { setPrefs(JSON.parse(p)); } catch {}
-  }, []);
+    let cancelled = false;
+    if (!user?.schoolId) {
+      setLoadingSchool(false);
+      return;
+    }
+    setSchoolId(user.schoolId);
+    setLoadingSchool(true);
+
+    (async () => {
+      try {
+        const res = await authApi.getSchool();
+        if (cancelled) return;
+        setSchool(mapSchoolProfile(res.data?.data));
+      } catch {
+        if (!cancelled) setSchool(EMPTY_SCHOOL);
+      } finally {
+        if (!cancelled) setLoadingSchool(false);
+      }
+
+      if (typeof window === 'undefined') return;
+      const f = localStorage.getItem(feesStorageKey(user.schoolId));
+      const p = localStorage.getItem(prefsStorageKey(user.schoolId));
+      if (f) try { if (!cancelled) setFees(JSON.parse(f)); } catch {}
+      if (p) try { if (!cancelled) setPrefs(JSON.parse(p)); } catch {}
+    })();
+
+    return () => { cancelled = true; };
+  }, [user?.schoolId]);
 
   const TABS: { id: Tab; icon: string; label: string }[] = [
     { id:'school',   icon:'🏫', label:'School Info'   },
@@ -163,11 +216,14 @@ export default function AdminSettings() {
 
       {/* ── SCHOOL INFO ── */}
       {tab === 'school' && (
-        <div className="glass rounded-2xl p-5 sm:p-8">
+      <div className="glass rounded-2xl p-5 sm:p-8">
           <div className="sims-section-header mb-6">
             <div>
               <h2 className="text-base font-bold text-white">School Information</h2>
               <p className="text-xs mt-0.5" style={{color:'rgba(255,255,255,0.4)'}}>Shown across the portal and receipts</p>
+              {loadingSchool && (
+                <p className="text-xs mt-1" style={{color:'rgba(255,255,255,0.55)'}}>Loading current school details…</p>
+              )}
             </div>
             <button onClick={saveSchool} disabled={savingSchool}
                     className="w-full px-5 py-2.5 rounded-xl text-sm font-black transition-all hover:-translate-y-0.5 disabled:opacity-60 sm:w-auto"
@@ -177,14 +233,14 @@ export default function AdminSettings() {
           </div>
           <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-2">
             {([
-              ['School Full Name','name','text','Guru Nanak Public...'],
-              ['Short Name','short','text','GNPSS'],
-              ['Principal Name','principal','text','Dr. R.K. Sharma'],
-              ['Official Email','email','email','principal@school.edu.in'],
-              ['Phone Number','phone','text','+91-161-...'],
-              ['CBSE School Code','cbseCode','text','1630247'],
-              ['Year Established','estd','number','1985'],
-              ['Affiliation Board','board','text','CBSE, New Delhi'],
+              ['School Full Name','name','text','Enter school name'],
+              ['Short Name','short','text','Enter short name'],
+              ['Principal Name','principal','text','Enter principal name'],
+              ['Official Email','email','email','Enter official email'],
+              ['Phone Number','phone','text','Enter phone number'],
+              ['CBSE School Code','cbseCode','text','Enter school code'],
+              ['Year Established','estd','number','Enter year established'],
+              ['Affiliation Board','board','text','Enter board name'],
             ] as [string,string,string,string][]).map(([label,key,type,ph]) => (
               <div key={key}>
                 <label className="block text-xs font-bold mb-1.5 uppercase tracking-wider" style={{color:'rgba(255,255,255,0.4)'}}>{label}</label>

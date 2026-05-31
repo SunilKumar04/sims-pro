@@ -1,5 +1,5 @@
 // prisma/seed/seed.ts
-import { PrismaClient, Role, FeeStatus, Priority } from '@prisma/client';
+import { PrismaClient, Prisma, Role, FeeStatus, Priority, SchoolStatus, SubscriptionStatus } from '@prisma/client';
 import * as bcrypt from 'bcryptjs';
 
 const prisma = new PrismaClient();
@@ -7,15 +7,200 @@ const prisma = new PrismaClient();
 async function main() {
   console.log('🌱 Seeding database...');
 
+  // Ensure the existing PostgreSQL enum can accept the new SaaS role.
+  await prisma.$executeRawUnsafe(`ALTER TYPE "Role" ADD VALUE IF NOT EXISTS 'SUPER_ADMIN'`);
+
+  const starterPlan = await prisma.plan.upsert({
+    where: { code: 'starter' },
+    update: {
+      name: 'Starter',
+      priceMonthly: new Prisma.Decimal(4999),
+      priceAnnual: new Prisma.Decimal(49990),
+      studentLimit: 500,
+      teacherLimit: 30,
+      storageLimitMb: 51200,
+      features: {
+        multiTenant: true,
+        reports: true,
+        attendance: true,
+        fees: true,
+        exams: true,
+      },
+      isActive: true,
+    },
+    create: {
+      code: 'starter',
+      name: 'Starter',
+      priceMonthly: new Prisma.Decimal(4999),
+      priceAnnual: new Prisma.Decimal(49990),
+      studentLimit: 500,
+      teacherLimit: 30,
+      storageLimitMb: 51200,
+      features: {
+        multiTenant: true,
+        reports: true,
+        attendance: true,
+        fees: true,
+        exams: true,
+      },
+      isActive: true,
+    },
+  });
+
+  const professionalPlan = await prisma.plan.upsert({
+    where: { code: 'professional' },
+    update: {
+      name: 'Professional',
+      priceMonthly: new Prisma.Decimal(9999),
+      priceAnnual: new Prisma.Decimal(99990),
+      studentLimit: 2000,
+      teacherLimit: 120,
+      storageLimitMb: 204800,
+      features: {
+        multiTenant: true,
+        reports: true,
+        attendance: true,
+        fees: true,
+        exams: true,
+        integrations: true,
+        sms: true,
+      },
+      isActive: true,
+    },
+    create: {
+      code: 'professional',
+      name: 'Professional',
+      priceMonthly: new Prisma.Decimal(9999),
+      priceAnnual: new Prisma.Decimal(99990),
+      studentLimit: 2000,
+      teacherLimit: 120,
+      storageLimitMb: 204800,
+      features: {
+        multiTenant: true,
+        reports: true,
+        attendance: true,
+        fees: true,
+        exams: true,
+        integrations: true,
+        sms: true,
+      },
+      isActive: true,
+    },
+  });
+
+  const enterprisePlan = await prisma.plan.upsert({
+    where: { code: 'enterprise' },
+    update: {
+      name: 'Enterprise',
+      priceMonthly: new Prisma.Decimal(19999),
+      priceAnnual: new Prisma.Decimal(199990),
+      studentLimit: 10000,
+      teacherLimit: 500,
+      storageLimitMb: 1024000,
+      features: {
+        multiTenant: true,
+        reports: true,
+        attendance: true,
+        fees: true,
+        exams: true,
+        integrations: true,
+        sms: true,
+        apiAccess: true,
+        dedicatedSupport: true,
+      },
+      isActive: true,
+    },
+    create: {
+      code: 'enterprise',
+      name: 'Enterprise',
+      priceMonthly: new Prisma.Decimal(19999),
+      priceAnnual: new Prisma.Decimal(199990),
+      studentLimit: 10000,
+      teacherLimit: 500,
+      storageLimitMb: 1024000,
+      features: {
+        multiTenant: true,
+        reports: true,
+        attendance: true,
+        fees: true,
+        exams: true,
+        integrations: true,
+        sms: true,
+        apiAccess: true,
+        dedicatedSupport: true,
+      },
+      isActive: true,
+    },
+  });
+
+  const demoSchool = await prisma.school.upsert({
+    where: { schoolCode: 'SCH-GNPSS-DEMO' },
+    update: {
+      name: 'Guru Nanak Public Senior Secondary School',
+      slug: 'guru-nanak-public-senior-secondary-school',
+      contactPerson: 'Dr. R.K. Sharma',
+      email: 'admin@gnpss.edu.in',
+      phone: '9876500000',
+      address: 'Ludhiana, Punjab',
+      status: SchoolStatus.ACTIVE,
+      onboardingDone: true,
+    },
+    create: {
+      schoolCode: 'SCH-GNPSS-DEMO',
+      name: 'Guru Nanak Public Senior Secondary School',
+      slug: 'guru-nanak-public-senior-secondary-school',
+      contactPerson: 'Dr. R.K. Sharma',
+      email: 'admin@gnpss.edu.in',
+      phone: '9876500000',
+      address: 'Ludhiana, Punjab',
+      status: SchoolStatus.ACTIVE,
+      onboardingDone: true,
+    },
+  });
+  await prisma.subscription.upsert({
+    where: { id: `sub-${demoSchool.id}` },
+    update: {
+      planId: starterPlan.id,
+      status: SubscriptionStatus.ACTIVE,
+      expiryDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+    },
+    create: {
+      id: `sub-${demoSchool.id}`,
+      schoolId: demoSchool.id,
+      planId: starterPlan.id,
+      startDate: new Date(),
+      expiryDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+      status: SubscriptionStatus.ACTIVE,
+      autoRenew: false,
+      studentLimitSnap: starterPlan.studentLimit,
+      teacherLimitSnap: starterPlan.teacherLimit,
+      amountPaid: starterPlan.priceMonthly,
+    },
+  });
+
+  // ─── Super Admin ───
+  const superAdminUser = await prisma.user.upsert({
+    where: { email: 'superadmin@sims.com' },
+    update: {},
+    create: {
+      email: 'superadmin@sims.com',
+      password: await bcrypt.hash('SuperAdmin@1234', 10),
+      role: Role.SUPER_ADMIN,
+      name: 'Platform Super Admin',
+    },
+  });
+  console.log('✅ Super admin created:', superAdminUser.email);
+
   // ─── Admin User ───
   const adminUser = await prisma.user.upsert({
     where: { email: 'admin@gnpss.edu.in' },
-    update: {},
+    update: { schoolId: demoSchool.id },
     create: {
       email: 'admin@gnpss.edu.in',
       password: await bcrypt.hash('Admin@1234', 10),
       role: Role.ADMIN,
       name: 'Dr. R.K. Sharma',
+      schoolId: demoSchool.id,
     },
   });
   console.log('✅ Admin created:', adminUser.email);
@@ -32,14 +217,16 @@ async function main() {
   for (const t of teachersData) {
     const user = await prisma.user.upsert({
       where: { email: t.email },
-      update: {},
+      update: { schoolId: demoSchool.id },
       create: {
         email: t.email,
         password: await bcrypt.hash('Teacher@1234', 10),
         role: Role.TEACHER,
         name: t.name,
+        schoolId: demoSchool.id,
         teacher: {
           create: {
+            schoolId: demoSchool.id,
             employeeCode: t.code,
             subject: t.subject,
             assignedClasses: t.classes,
@@ -52,6 +239,9 @@ async function main() {
       },
       include: { teacher: true },
     });
+    if (user.teacher?.id) {
+      await prisma.teacher.update({ where: { id: user.teacher.id }, data: { schoolId: demoSchool.id } });
+    }
     teachers.push(user.teacher);
     console.log('✅ Teacher created:', t.name);
   }
@@ -68,9 +258,9 @@ async function main() {
 
   for (const c of classesData) {
     await prisma.class.upsert({
-      where: { name: c.name },
-      update: {},
-      create: c,
+      where: { schoolId_name: { schoolId: demoSchool.id, name: c.name } },
+      update: { schoolId: demoSchool.id },
+      create: { ...c, schoolId: demoSchool.id },
     });
   }
   console.log('✅ Classes seeded');
@@ -93,14 +283,16 @@ async function main() {
     const grade = s.cls.replace(/[AB]$/, '');
     const user = await prisma.user.upsert({
       where: { email: s.email },
-      update: {},
+      update: { schoolId: demoSchool.id },
       create: {
         email: s.email,
         password: await bcrypt.hash('Student@1234', 10),
         role: Role.STUDENT,
         name: s.name,
+        schoolId: demoSchool.id,
         student: {
           create: {
+            schoolId: demoSchool.id,
             roll: s.roll,
             className: s.cls,
             phone: s.phone,
@@ -113,6 +305,9 @@ async function main() {
       },
       include: { student: true },
     });
+    if (user.student?.id) {
+      await prisma.student.update({ where: { id: user.student.id }, data: { schoolId: demoSchool.id } });
+    }
     students.push(user.student);
     console.log('✅ Student created:', s.name);
 
@@ -128,6 +323,7 @@ async function main() {
       update: {},
       create: {
         id: `fee-${user.student.id}`,
+        schoolId: demoSchool.id,
         studentId: user.student.id,
         term: 'Term 1 – 2024',
         tuition: amt - 3000,
@@ -153,7 +349,7 @@ async function main() {
   ];
 
   for (const n of noticesData) {
-    await prisma.notice.create({ data: n });
+    await prisma.notice.create({ data: { ...n, schoolId: demoSchool.id } });
   }
   console.log('✅ Notices seeded');
 
@@ -161,9 +357,9 @@ async function main() {
   if (teachers[0]) {
     await prisma.homework.createMany({
       data: [
-        { teacherId: teachers[0].id, subject: 'Mathematics', className: '10A', title: 'Chapter 5 – Quadratic Equations', description: 'Solve exercises 5.1 to 5.4 from NCERT textbook. Show all steps.', dueDate: new Date('2024-03-25') },
-        { teacherId: teachers[1].id, subject: 'Physics', className: '9A', title: 'Laws of Motion – Numericals', description: 'Complete all numerical problems from Chapter 5. Diagrams mandatory.', dueDate: new Date('2024-03-26') },
-        { teacherId: teachers[2].id, subject: 'English', className: '8A', title: 'Essay Writing', description: 'Write a 300-word essay on "My Favourite Season". Focus on vocabulary.', dueDate: new Date('2024-03-27') },
+        { schoolId: demoSchool.id, teacherId: teachers[0].id, subject: 'Mathematics', className: '10A', title: 'Chapter 5 – Quadratic Equations', description: 'Solve exercises 5.1 to 5.4 from NCERT textbook. Show all steps.', dueDate: new Date('2024-03-25') },
+        { schoolId: demoSchool.id, teacherId: teachers[1].id, subject: 'Physics', className: '9A', title: 'Laws of Motion – Numericals', description: 'Complete all numerical problems from Chapter 5. Diagrams mandatory.', dueDate: new Date('2024-03-26') },
+        { schoolId: demoSchool.id, teacherId: teachers[2].id, subject: 'English', className: '8A', title: 'Essay Writing', description: 'Write a 300-word essay on "My Favourite Season". Focus on vocabulary.', dueDate: new Date('2024-03-27') },
       ],
     });
     console.log('✅ Homework seeded');
@@ -172,6 +368,7 @@ async function main() {
   console.log('\n🎉 Database seeded successfully!');
   console.log('\n📋 Login Credentials:');
   console.log('─────────────────────────────────────');
+  console.log('SuperAdmin: superadmin@sims.com / SuperAdmin@1234');
   console.log('Admin:   admin@gnpss.edu.in / Admin@1234');
   console.log('Teacher: sunita@gnpss.edu.in / Teacher@1234');
   console.log('Student: aarav@student.gnpss.edu.in / Student@1234');

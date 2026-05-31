@@ -2,7 +2,7 @@
 //  SIMS Pro – Prisma Schema · PostgreSQL
 // ═══════════════════════════════════════════════════════
 generator client { provider = "prisma-client-js" }
-datasource db    { provider = "postgresql"; url = env("DATABASE_URL"); directUrl = env("DIRECT_URL") }
+datasource db    { provider = "postgresql"; url = env("DATABASE_URL") }
 
 enum Role             { ADMIN TEACHER STUDENT PARENT }
 enum FeeStatus        { PAID PENDING PARTIAL }

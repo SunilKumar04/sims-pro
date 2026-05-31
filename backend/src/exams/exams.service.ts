@@ -1,6 +1,7 @@
 // src/exams/exams.service.ts
-import { Injectable, ConflictException, NotFoundException } from '@nestjs/common';
+import { ForbiddenException, Injectable, ConflictException, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { TenantContextService } from '../tenancy/tenant-context.service';
 
 // ── Prisma include for Exam (without invigilators on dateSheets) ──────────
 const INCLUDE_ENTRIES = {
@@ -28,16 +29,37 @@ const INCLUDE_ENTRIES_WITH_INV = {
 
 @Injectable()
 export class ExamsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private readonly tenant: TenantContextService,
+  ) {}
+
+  private getSchoolId() {
+    const schoolId = this.tenant.get().schoolId;
+    if (!schoolId) throw new ForbiddenException('School tenant not found');
+    return schoolId;
+  }
+
+  private async resolveTeacherId(rawTeacherId: string) {
+    const schoolId = this.getSchoolId();
+    const direct  = await this.prisma.teacher.findFirst({ where: { id: rawTeacherId, schoolId } });
+    if (direct) return direct.id;
+    const byUser = await this.prisma.teacher.findFirst({ where: { userId: rawTeacherId, schoolId } });
+    if (byUser) return byUser.id;
+    const first = await this.prisma.teacher.findFirst({ where: { schoolId } });
+    return first?.id ?? rawTeacherId;
+  }
 
   async create(dto: any) {
-    const exists = await this.prisma.exam.findUnique({
-      where: { className_examType: { className: dto.className, examType: dto.examType } },
+    const schoolId = this.getSchoolId();
+    const exists = await this.prisma.exam.findFirst({
+      where: { schoolId, className: dto.className, examType: dto.examType },
     });
     if (exists) throw new ConflictException(`${dto.examType} exam already exists for class ${dto.className}`);
 
     const data = await this.prisma.exam.create({
       data: {
+        schoolId,
         className:    dto.className,
         examType:     dto.examType,
         title:        dto.title,
@@ -51,6 +73,9 @@ export class ExamsService {
   }
 
   async update(id: string, dto: any) {
+    const schoolId = this.getSchoolId();
+    const exam = await this.prisma.exam.findFirst({ where: { id, schoolId } });
+    if (!exam) throw new NotFoundException('Exam not found');
     const data = await this.prisma.exam.update({
       where: { id },
       data: {
@@ -65,13 +90,16 @@ export class ExamsService {
   }
 
   async remove(id: string) {
+    const exam = await this.prisma.exam.findFirst({ where: { id, schoolId: this.getSchoolId() } });
+    if (!exam) throw new NotFoundException('Exam not found');
     await this.prisma.exam.delete({ where: { id } });
     return { success: true };
   }
 
   async getAll(q: any) {
+    const schoolId = this.getSchoolId();
     const data = await this.prisma.exam.findMany({
-      where:   q.className ? { className: q.className } : {},
+      where:   { schoolId, ...(q.className ? { className: q.className } : {}) },
       include: INCLUDE_ENTRIES,
       orderBy: [{ className: 'asc' }, { examType: 'asc' }],
     });
@@ -79,8 +107,9 @@ export class ExamsService {
   }
 
   async getByClass(className: string) {
+    const schoolId = this.getSchoolId();
     const data = await this.prisma.exam.findMany({
-      where:   { className },
+      where:   { schoolId, className },
       include: INCLUDE_ENTRIES,
       orderBy: { examType: 'asc' },
     });
@@ -88,8 +117,9 @@ export class ExamsService {
   }
 
   async getDatesheet(className: string, examType: string) {
-    const exam = await this.prisma.exam.findUnique({
-      where:   { className_examType: { className, examType: examType as any } },
+    const schoolId = this.getSchoolId();
+    const exam = await this.prisma.exam.findFirst({
+      where:   { schoolId, className, examType: examType as any },
       include: INCLUDE_ENTRIES,
     });
     if (!exam) throw new NotFoundException('Exam not found');
@@ -98,6 +128,7 @@ export class ExamsService {
 
   // ── Get all exams for a given date (admin exam-day view) ───────────────
   async getExamsByDate(dateStr?: string) {
+    const schoolId = this.getSchoolId();
     const target = dateStr ? new Date(dateStr) : new Date();
     target.setHours(0, 0, 0, 0);
 
@@ -105,7 +136,7 @@ export class ExamsService {
     let entries: any[] = [];
     try {
       entries = await (this.prisma as any).dateSheetEntry.findMany({
-        where: { date: target },
+        where: { schoolId, date: target },
         include: {
           exam: true,
           invigilators: {
@@ -120,7 +151,7 @@ export class ExamsService {
     } catch {
       // Invigilator table not yet migrated — return entries without invigilators
       entries = await this.prisma.dateSheetEntry.findMany({
-        where:   { date: target },
+        where:   { schoolId, date: target },
         include: { exam: true },
         orderBy: [{ startTime: 'asc' }, { room: 'asc' }],
       });
@@ -139,8 +170,9 @@ export class ExamsService {
   }
 
   async addEntry(examId: string, dto: any) {
-    const exists = await this.prisma.dateSheetEntry.findUnique({
-      where: { examId_subject: { examId, subject: dto.subject } },
+    const schoolId = this.getSchoolId();
+    const exists = await this.prisma.dateSheetEntry.findFirst({
+      where: { schoolId, examId, subject: dto.subject },
     });
 
     if (exists) {
@@ -160,6 +192,7 @@ export class ExamsService {
 
     const data = await this.prisma.dateSheetEntry.create({
       data: {
+        schoolId,
         examId,
         subject:      dto.subject,
         date:         new Date(dto.date),
@@ -179,11 +212,15 @@ export class ExamsService {
   }
 
   async deleteEntry(entryId: string) {
+    const entry = await this.prisma.dateSheetEntry.findFirst({ where: { id: entryId, schoolId: this.getSchoolId() } });
+    if (!entry) throw new NotFoundException('Date sheet entry not found');
     await this.prisma.dateSheetEntry.delete({ where: { id: entryId } });
     return { success: true };
   }
 
   async publish(id: string, pub: boolean) {
+    const exam = await this.prisma.exam.findFirst({ where: { id, schoolId: this.getSchoolId() } });
+    if (!exam) throw new NotFoundException('Exam not found');
     const data = await this.prisma.exam.update({
       where:   { id },
       data:    { isPublished: pub },
@@ -194,21 +231,17 @@ export class ExamsService {
 
   // ── Assign invigilator (graceful if model not migrated) ────────────────
   async assignInvigilator(dateSheetEntryId: string, dto: { teacherId: string; role?: string }) {
-    const entry = await this.prisma.dateSheetEntry.findUnique({ where: { id: dateSheetEntryId } });
+    const schoolId = this.getSchoolId();
+    const entry = await this.prisma.dateSheetEntry.findFirst({ where: { id: dateSheetEntryId, schoolId } });
     if (!entry) throw new NotFoundException('Date sheet entry not found');
 
-    let teacherId = dto.teacherId;
-    const direct  = await this.prisma.teacher.findUnique({ where: { id: dto.teacherId } });
-    if (!direct) {
-      const byUser = await this.prisma.teacher.findUnique({ where: { userId: dto.teacherId } });
-      if (byUser) teacherId = byUser.id;
-    }
+    const teacherId = await this.resolveTeacherId(dto.teacherId);
 
     try {
       const data = await (this.prisma as any).examInvigilator.upsert({
-        where:  { dateSheetEntryId_teacherId: { dateSheetEntryId, teacherId } },
+        where:  { schoolId_dateSheetEntryId_teacherId: { schoolId, dateSheetEntryId, teacherId } },
         update: { role: dto.role ?? 'INVIGILATOR' },
-        create: { dateSheetEntryId, teacherId, role: dto.role ?? 'INVIGILATOR' },
+        create: { schoolId, dateSheetEntryId, teacherId, role: dto.role ?? 'INVIGILATOR' },
         include: {
           teacher: { select: { id: true, employeeCode: true, user: { select: { name: true } } } },
         },
@@ -224,6 +257,9 @@ export class ExamsService {
 
   async removeInvigilator(invId: string) {
     try {
+      const schoolId = this.getSchoolId();
+      const invigilator = await (this.prisma as any).examInvigilator.findFirst({ where: { id: invId, schoolId } });
+      if (!invigilator) throw new NotFoundException('Invigilator not found');
       await (this.prisma as any).examInvigilator.delete({ where: { id: invId } });
     } catch (err: any) {
       if (err.message?.includes('does not exist')) {
@@ -236,17 +272,13 @@ export class ExamsService {
 
   // ── Get all exam duties assigned to a teacher ──────────────────────────
   async getMyDuties(rawTeacherId: string) {
-    let teacherId = rawTeacherId;
-    const direct  = await this.prisma.teacher.findUnique({ where: { id: rawTeacherId } });
-    if (!direct) {
-      const byUser = await this.prisma.teacher.findUnique({ where: { userId: rawTeacherId } });
-      if (byUser) teacherId = byUser.id;
-    }
+    const schoolId = this.getSchoolId();
+    const teacherId = await this.resolveTeacherId(rawTeacherId);
 
     let duties: any[] = [];
     try {
       duties = await (this.prisma as any).examInvigilator.findMany({
-        where: { teacherId },
+        where: { teacherId, schoolId },
         include: {
           dateSheetEntry: {
             include: {

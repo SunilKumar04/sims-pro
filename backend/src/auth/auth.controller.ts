@@ -36,6 +36,22 @@ export class AuthController {
     return this.authService.getProfile(user.id);
   }
 
+  @Get('school')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('JWT-Auth')
+  @ApiOperation({ summary: 'Get current school profile' })
+  getSchool(@CurrentUser() user: any) {
+    return this.authService.getCurrentSchool(user);
+  }
+
+  @Patch('school')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('JWT-Auth')
+  @ApiOperation({ summary: 'Update current school profile' })
+  updateSchool(@CurrentUser() user: any, @Body() body: any) {
+    return this.authService.updateCurrentSchool(user, body);
+  }
+
   @Patch('change-password')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth('JWT-Auth')

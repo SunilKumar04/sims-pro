@@ -1,28 +1,41 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { TenantContextService } from '../tenancy/tenant-context.service';
 
 @Injectable()
 export class HomeworkService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private readonly tenant: TenantContextService,
+  ) {}
+
+  private getSchoolId() {
+    const schoolId = this.tenant.get().schoolId;
+    if (!schoolId) throw new ForbiddenException('School tenant not found');
+    return schoolId;
+  }
 
   // Resolve teacherId — could be Teacher.id or User.id
   private async resolveTeacherId(id: string): Promise<string> {
+    const schoolId = this.getSchoolId();
     // Try direct Teacher.id first
-    const byId = await this.prisma.teacher.findUnique({ where: { id } });
+    const byId = await this.prisma.teacher.findFirst({ where: { id, schoolId } });
     if (byId) return byId.id;
     // Try by userId
-    const byUser = await this.prisma.teacher.findUnique({ where: { userId: id } });
+    const byUser = await this.prisma.teacher.findFirst({ where: { userId: id, schoolId } });
     if (byUser) return byUser.id;
     // Fallback: use first teacher (dev mode only)
-    const first = await this.prisma.teacher.findFirst();
+    const first = await this.prisma.teacher.findFirst({ where: { schoolId } });
     if (first) return first.id;
     throw new NotFoundException('Teacher record not found');
   }
 
   async create(dto: any, rawTeacherId: string) {
+    const schoolId = this.getSchoolId();
     const teacherId = await this.resolveTeacherId(rawTeacherId);
     const hw = await this.prisma.homework.create({
       data: {
+        schoolId,
         ...dto,
         teacherId,
         dueDate: new Date(dto.dueDate),
@@ -33,7 +46,7 @@ export class HomeworkService {
   }
 
   async findAll(query: any) {
-    const where: any = {};
+    const where: any = { schoolId: this.getSchoolId() };
     if (query.className) where.className = query.className;
     if (query.subject)   where.subject   = query.subject;
     if (query.teacherId) where.teacherId = query.teacherId;
@@ -47,8 +60,9 @@ export class HomeworkService {
   }
 
   async findOne(id: string) {
-    const hw = await this.prisma.homework.findUnique({
-      where: { id },
+    const schoolId = this.getSchoolId();
+    const hw = await this.prisma.homework.findFirst({
+      where: { id, schoolId },
       include: { teacher: { include: { user: { select: { name: true } } } } },
     });
     if (!hw) throw new NotFoundException('Homework not found');
@@ -56,7 +70,7 @@ export class HomeworkService {
   }
 
   async update(id: string, dto: any) {
-    const hw = await this.prisma.homework.findUnique({ where: { id } });
+    const hw = await this.prisma.homework.findFirst({ where: { id, schoolId: this.getSchoolId() } });
     if (!hw) throw new NotFoundException('Homework not found');
     const updated = await this.prisma.homework.update({
       where: { id },
@@ -66,7 +80,7 @@ export class HomeworkService {
   }
 
   async remove(id: string) {
-    const hw = await this.prisma.homework.findUnique({ where: { id } });
+    const hw = await this.prisma.homework.findFirst({ where: { id, schoolId: this.getSchoolId() } });
     if (!hw) throw new NotFoundException('Homework not found');
     await this.prisma.homework.delete({ where: { id } });
     return { success: true, message: 'Homework deleted' };

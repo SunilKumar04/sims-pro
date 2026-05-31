@@ -1,5 +1,6 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { TenantContextService } from '../tenancy/tenant-context.service';
 
 function calcGrade(marks: number, max: number): string {
   const p = (marks / max) * 100;
@@ -13,13 +14,23 @@ function calcGrade(marks: number, max: number): string {
 
 @Injectable()
 export class MarksService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private readonly tenant: TenantContextService,
+  ) {}
+
+  private getSchoolId() {
+    const schoolId = this.tenant.get().schoolId;
+    if (!schoolId) throw new ForbiddenException('School tenant not found');
+    return schoolId;
+  }
 
   // Resolve studentId — accepts User.id or Student.id
   private async resolveStudentId(id: string): Promise<string | null> {
-    const byId   = await this.prisma.student.findUnique({ where: { id } });
+    const schoolId = this.getSchoolId();
+    const byId   = await this.prisma.student.findFirst({ where: { id, schoolId } });
     if (byId) return byId.id;
-    const byUser = await this.prisma.student.findUnique({ where: { userId: id } });
+    const byUser = await this.prisma.student.findFirst({ where: { userId: id, schoolId } });
     if (byUser) return byUser.id;
     return null;
   }
@@ -32,13 +43,15 @@ export class MarksService {
   }) {
     const results = [];
     const year    = dto.year || new Date().getFullYear();
+    const schoolId = this.getSchoolId();
 
     for (const rec of dto.records) {
       const grade = calcGrade(rec.marks, rec.maxMarks || 100);
       try {
         const mark = await this.prisma.mark.upsert({
           where: {
-            studentId_subject_examType_year: {
+            schoolId_studentId_subject_examType_year: {
+              schoolId,
               studentId: rec.studentId,
               subject:   rec.subject,
               examType:  dto.examType as any,
@@ -47,6 +60,7 @@ export class MarksService {
           },
           update: { marks: rec.marks, maxMarks: rec.maxMarks || 100, grade },
           create: {
+            schoolId,
             studentId: rec.studentId,
             subject:   rec.subject,
             examType:  dto.examType as any,
@@ -66,8 +80,9 @@ export class MarksService {
 
   async getByClass(className: string, examType: string, year?: number) {
     const y = year || new Date().getFullYear();
+    const schoolId = this.getSchoolId();
     const marks = await this.prisma.mark.findMany({
-      where: { className, examType: examType as any, year: y },
+      where: { schoolId, className, examType: examType as any, year: y },
       include: { student: { include: { user: { select: { name: true } } } } },
       orderBy: { student: { roll: 'asc' } },
     });
@@ -80,7 +95,7 @@ export class MarksService {
     if (!studentId) return { success: false, message: 'Student not found', data: [] };
 
     const marks = await this.prisma.mark.findMany({
-      where: { studentId },
+      where: { studentId, schoolId: this.getSchoolId() },
       orderBy: [{ examType: 'asc' }, { subject: 'asc' }],
     });
 
@@ -100,7 +115,7 @@ export class MarksService {
 
     const y = year || new Date().getFullYear();
     const marks = await this.prisma.mark.findMany({
-      where: { studentId, examType: examType as any, year: y },
+      where: { studentId, schoolId: this.getSchoolId(), examType: examType as any, year: y },
       orderBy: { subject: 'asc' },
     });
 

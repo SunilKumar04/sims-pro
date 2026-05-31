@@ -8,14 +8,35 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL")
 }
 
 enum Role {
   ADMIN
+  SCHOOL_ADMIN
   TEACHER
   STUDENT
   PARENT
+  ACCOUNTANT
+  SUPER_ADMIN
+}
+
+enum SchoolStatus {
+  ACTIVE
+  SUSPENDED
+  PENDING
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  PAST_DUE
+  EXPIRED
+  CANCELED
+  GRACE
+}
+
+enum RoleScope {
+  SYSTEM
+  SCHOOL
 }
 
 enum FeeStatus {
@@ -59,11 +80,15 @@ enum AssignmentStatus {
 
 model User {
   id           String    @id @default(cuid())
+  schoolId     String?
+  school       School?   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
   email        String    @unique
   password     String
   role         Role      @default(STUDENT)
   name         String
+  phone        String?
   isActive     Boolean   @default(true)
+  mustChangePwd Boolean  @default(false)
   refreshToken      String?
   lastLogin         DateTime?
   resetToken        String?   @unique
@@ -72,14 +97,146 @@ model User {
   updatedAt    DateTime  @updatedAt
   student      Student?
   teacher      Teacher?
+  @@index([schoolId, role])
   @@map("users")
+}
+
+model School {
+  id              String             @id @default(cuid())
+  schoolCode      String             @unique
+  name            String
+  slug            String             @unique
+  contactPerson   String
+  email           String             @unique
+  phone           String?
+  address         String?
+  status          SchoolStatus       @default(PENDING)
+  onboardingDone  Boolean            @default(false)
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+
+  users           User[]
+  students        Student[]
+  teachers        Teacher[]
+  classes         Class[]
+  fees            Fee[]
+  notices         Notice[]
+  homework        Homework[]
+  attendance      Attendance[]
+  marks           Mark[]
+  timetableSlots  TimetableSlot[]
+  attendanceSessions AttendanceSession[]
+  exams           Exam[]
+  assignments     Assignment[]
+  classSubjectTeachers ClassSubjectTeacher[]
+  subjectAttendanceRecords SubjectAttendance[]
+  dateSheetEntries DateSheetEntry[]
+  assignmentSubmissions AssignmentSubmission[]
+  examInvigilators ExamInvigilator[]
+  subscriptions   Subscription[]
+  roles           AccessRole[]
+  settings        SchoolSetting[]
+
+  @@map("schools")
+}
+
+model Plan {
+  id              String   @id @default(cuid())
+  code            String   @unique
+  name            String
+  priceMonthly    Decimal  @db.Decimal(10, 2)
+  priceAnnual     Decimal? @db.Decimal(10, 2)
+  studentLimit    Int
+  teacherLimit    Int
+  storageLimitMb  Int?
+  features        Json
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  subscriptions   Subscription[]
+  @@map("plans")
+}
+
+model Subscription {
+  id             String             @id @default(cuid())
+  schoolId       String
+  planId         String
+  school         School             @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  plan           Plan               @relation(fields: [planId], references: [id])
+  startDate      DateTime
+  expiryDate     DateTime
+  status         SubscriptionStatus @default(ACTIVE)
+  autoRenew      Boolean            @default(false)
+  studentLimitSnap Int
+  teacherLimitSnap Int
+  amountPaid     Decimal?           @db.Decimal(10, 2)
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+
+  @@index([schoolId, status])
+  @@map("subscriptions")
+}
+
+model AccessRole {
+  id          String   @id @default(cuid())
+  schoolId    String?
+  school      School?  @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  code        String
+  name        String
+  scope       RoleScope @default(SCHOOL)
+  isSystem    Boolean   @default(false)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  permissions RolePermission[]
+
+  @@unique([schoolId, code])
+  @@map("roles")
+}
+
+model Permission {
+  id          String   @id @default(cuid())
+  code        String   @unique
+  name        String
+  module      String
+  createdAt   DateTime @default(now())
+
+  roles       RolePermission[]
+  @@map("permissions")
+}
+
+model RolePermission {
+  id            String      @id @default(cuid())
+  roleId        String
+  permissionId  String
+  role          AccessRole  @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission    Permission  @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@unique([roleId, permissionId])
+  @@map("role_permissions")
+}
+
+model SchoolSetting {
+  id          String   @id @default(cuid())
+  schoolId    String
+  school      School   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  key         String
+  value       Json
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([schoolId, key])
+  @@map("school_settings")
 }
 
 model Student {
   id          String   @id @default(cuid())
+  schoolId    String?
+  school      School?  @relation(fields: [schoolId], references: [id], onDelete: Cascade)
   userId      String   @unique
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  roll        String   @unique
+  roll        String
   className   String
   phone       String
   parentName  String
@@ -94,14 +251,17 @@ model Student {
   marks                 Mark[]
   subjectAttendance     SubjectAttendance[]
   assignmentSubmissions AssignmentSubmission[]
+  @@unique([schoolId, roll])
   @@map("students")
 }
 
 model Teacher {
   id              String   @id @default(cuid())
+  schoolId        String?
+  school          School?  @relation(fields: [schoolId], references: [id], onDelete: Cascade)
   userId          String   @unique
   user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  employeeCode    String   @unique
+  employeeCode    String
   subject         String
   assignedClasses String
   phone           String
@@ -119,11 +279,14 @@ model Teacher {
   assignments        Assignment[]
   @@map("teachers")
   invigilating ExamInvigilator[]
+  @@unique([schoolId, employeeCode])
 }
 
 model Class {
   id           String   @id @default(cuid())
-  name         String   @unique
+  schoolId     String?
+  school       School?  @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  name         String
   teacherName  String   @default("")
   room         String
   subject      String
@@ -132,11 +295,14 @@ model Class {
   section      String
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
+  @@unique([schoolId, name])
   @@map("classes")
 }
 
 model Fee {
   id        String    @id @default(cuid())
+  schoolId  String?
+  school    School?   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
   studentId String
   student   Student   @relation(fields: [studentId], references: [id], onDelete: Cascade)
   term      String
@@ -152,11 +318,14 @@ model Fee {
   remarks   String?
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
+  @@index([schoolId, status])
   @@map("fees")
 }
 
 model Notice {
   id          String    @id @default(cuid())
+  schoolId    String?
+  school      School?   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
   title       String
   body        String
   target      String    @default("All")
@@ -166,11 +335,14 @@ model Notice {
   expiresAt   DateTime?
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
+  @@index([schoolId, isPublished])
   @@map("notices")
 }
 
 model Homework {
   id            String   @id @default(cuid())
+  schoolId      String?
+  school        School?  @relation(fields: [schoolId], references: [id], onDelete: Cascade)
   teacherId     String
   teacher       Teacher  @relation(fields: [teacherId], references: [id], onDelete: Cascade)
   subject       String
@@ -181,11 +353,14 @@ model Homework {
   attachmentUrl String?
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
+  @@index([schoolId, dueDate])
   @@map("homework")
 }
 
 model Attendance {
   id        String           @id @default(cuid())
+  schoolId  String?
+  school    School?          @relation(fields: [schoolId], references: [id], onDelete: Cascade)
   studentId String
   student   Student          @relation(fields: [studentId], references: [id], onDelete: Cascade)
   teacherId String
@@ -194,12 +369,15 @@ model Attendance {
   status    AttendanceStatus @default(PRESENT)
   remark    String?
   createdAt DateTime         @default(now())
-  @@unique([studentId, date])
+  @@unique([schoolId, studentId, date])
+  @@index([schoolId, date])
   @@map("attendance")
 }
 
 model Mark {
   id        String   @id @default(cuid())
+  schoolId  String?
+  school    School?  @relation(fields: [schoolId], references: [id], onDelete: Cascade)
   studentId String
   student   Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
   subject   String
@@ -211,12 +389,15 @@ model Mark {
   year      Int
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  @@unique([studentId, subject, examType, year])
+  @@unique([schoolId, studentId, subject, examType, year])
+  @@index([schoolId, className, year])
   @@map("marks")
 }
 
 model ClassSubjectTeacher {
   id             String   @id @default(cuid())
+  schoolId      String?
+  school        School?  @relation(fields: [schoolId], references: [id], onDelete: Cascade)
   className      String
   subject        String
   teacherId      String
@@ -224,12 +405,15 @@ model ClassSubjectTeacher {
   periodsPerWeek Int      @default(5)
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
-  @@unique([className, subject])
+  @@unique([schoolId, className, subject])
+  @@index([schoolId, className])
   @@map("class_subject_teachers")
 }
 
 model TimetableSlot {
   id        String   @id @default(cuid())
+  schoolId  String?
+  school    School?  @relation(fields: [schoolId], references: [id], onDelete: Cascade)
   className String
   subject   String
   teacherId String
@@ -241,12 +425,15 @@ model TimetableSlot {
   room      String   @default("")
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  @@unique([className, dayOfWeek, period])
+  @@unique([schoolId, className, dayOfWeek, period])
+  @@index([schoolId, className])
   @@map("timetable_slots")
 }
 
 model AttendanceSession {
   id        String   @id @default(cuid())
+  schoolId  String?
+  school    School?  @relation(fields: [schoolId], references: [id], onDelete: Cascade)
   className String
   subject   String
   teacherId String
@@ -258,12 +445,15 @@ model AttendanceSession {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   records   SubjectAttendance[]
-  @@unique([className, subject, date, period])
+  @@unique([schoolId, className, subject, date, period])
+  @@index([schoolId, className, date])
   @@map("attendance_sessions")
 }
 
 model SubjectAttendance {
   id        String            @id @default(cuid())
+  schoolId  String?
+  school    School?           @relation(fields: [schoolId], references: [id], onDelete: Cascade)
   sessionId String
   session   AttendanceSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
   studentId String
@@ -271,12 +461,15 @@ model SubjectAttendance {
   status    AttendanceStatus  @default(PRESENT)
   remark    String?
   createdAt DateTime          @default(now())
-  @@unique([sessionId, studentId])
+  @@unique([schoolId, sessionId, studentId])
+  @@index([schoolId, studentId])
   @@map("subject_attendance")
 }
 
 model Exam {
   id           String       @id @default(cuid())
+  schoolId     String?
+  school       School?      @relation(fields: [schoolId], references: [id], onDelete: Cascade)
   className    String
   examType     ExamCategory
   title        String
@@ -288,12 +481,15 @@ model Exam {
   createdAt    DateTime     @default(now())
   updatedAt    DateTime     @updatedAt
   dateSheets   DateSheetEntry[]
-  @@unique([className, examType])
+  @@unique([schoolId, className, examType])
+  @@index([schoolId, className, examType])
   @@map("exams")
 }
 
 model DateSheetEntry {
   id           String   @id @default(cuid())
+  schoolId     String?
+  school       School?  @relation(fields: [schoolId], references: [id], onDelete: Cascade)
   examId       String
   exam         Exam     @relation(fields: [examId], references: [id], onDelete: Cascade)
   subject      String
@@ -304,13 +500,16 @@ model DateSheetEntry {
   maxMarks     Int      @default(100)
   passingMarks Int      @default(33)
   createdAt    DateTime @default(now())
-  @@unique([examId, subject])
+  @@unique([schoolId, examId, subject])
+  @@index([schoolId, date])
   @@map("date_sheet_entries")
   invigilators ExamInvigilator[]
 }
 
 model Assignment {
   id          String   @id @default(cuid())
+  schoolId    String?
+  school      School?  @relation(fields: [schoolId], references: [id], onDelete: Cascade)
   teacherId   String
   teacher     Teacher  @relation(fields: [teacherId], references: [id], onDelete: Cascade)
   className   String
@@ -323,11 +522,14 @@ model Assignment {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   submissions AssignmentSubmission[]
+  @@index([schoolId, className, dueDate])
   @@map("assignments")
 }
 
 model AssignmentSubmission {
   id           String           @id @default(cuid())
+  schoolId     String?
+  school       School?          @relation(fields: [schoolId], references: [id], onDelete: Cascade)
   assignmentId String
   assignment   Assignment       @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
   studentId    String
@@ -340,7 +542,8 @@ model AssignmentSubmission {
   status       AssignmentStatus @default(PENDING)
   gradedAt     DateTime?
   updatedAt    DateTime         @updatedAt
-  @@unique([assignmentId, studentId])
+  @@unique([schoolId, assignmentId, studentId])
+  @@index([schoolId, status])
   @@map("assignment_submissions")
 }
 
@@ -353,6 +556,8 @@ enum InvigilatorRole {
 
 model ExamInvigilator {
   id               String          @id @default(cuid())
+  schoolId         String?
+  school           School?         @relation(fields: [schoolId], references: [id], onDelete: Cascade)
   dateSheetEntryId String
   dateSheetEntry   DateSheetEntry  @relation(fields: [dateSheetEntryId], references: [id], onDelete: Cascade)
   teacherId        String
@@ -360,6 +565,7 @@ model ExamInvigilator {
   role             InvigilatorRole @default(INVIGILATOR)
   createdAt        DateTime        @default(now())
 
-  @@unique([dateSheetEntryId, teacherId])
+  @@unique([schoolId, dateSheetEntryId, teacherId])
+  @@index([schoolId, teacherId])
   @@map("exam_invigilators")
 }

@@ -1,8 +1,9 @@
 // src/students/students.service.ts
 import {
-  Injectable, NotFoundException, ConflictException,
+  Injectable, NotFoundException, ConflictException, ForbiddenException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { TenantContextService } from '../tenancy/tenant-context.service';
 import { CreateStudentDto } from './dto/create-student.dto';
 import { UpdateStudentDto } from './dto/update-student.dto';
 import { QueryStudentDto } from './dto/query-student.dto';
@@ -12,14 +13,24 @@ import { Role } from '@prisma/client';
 
 @Injectable()
 export class StudentsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private readonly tenant: TenantContextService,
+  ) {}
+
+  private getSchoolId() {
+    const schoolId = this.tenant.get().schoolId;
+    if (!schoolId) throw new ForbiddenException('School tenant not found');
+    return schoolId;
+  }
 
   async create(dto: CreateStudentDto) {
+    const schoolId = this.getSchoolId();
     // Check roll uniqueness
-    const rollExists = await this.prisma.student.findUnique({ where: { roll: dto.roll } });
+    const rollExists = await this.prisma.student.findFirst({ where: { schoolId, roll: dto.roll } });
     if (rollExists) throw new ConflictException(`Roll number ${dto.roll} already exists`);
 
-    const emailExists = await this.prisma.user.findUnique({ where: { email: dto.email } });
+    const emailExists = await this.prisma.user.findFirst({ where: { schoolId, email: dto.email } });
     if (emailExists) throw new ConflictException('Email already registered');
 
     const hashed = await bcrypt.hash(dto.password || 'Student@1234', 10);
@@ -27,12 +38,14 @@ export class StudentsService {
     const user = await this.prisma.$transaction(async (tx) => {
       const createdUser = await tx.user.create({
         data: {
+          schoolId,
           email: dto.email,
           password: hashed,
           name: dto.name,
           role: Role.STUDENT,
           student: {
             create: {
+              schoolId,
               roll: dto.roll,
               className: dto.className,
               phone: dto.phone,
@@ -48,7 +61,7 @@ export class StudentsService {
 
       if (createdUser.student?.id) {
         await tx.fee.create({
-          data: buildInitialFeeData(createdUser.student.id, createdUser.student.className),
+          data: buildInitialFeeData(createdUser.student.id, createdUser.student.className, schoolId),
         });
       }
 
@@ -59,10 +72,11 @@ export class StudentsService {
   }
 
   async findAll(query: QueryStudentDto) {
+    const schoolId = this.getSchoolId();
     const { className, feeStatus, search, page = 1, limit = 50 } = query;
     const skip = (page - 1) * limit;
 
-    const where: any = {};
+    const where: any = { schoolId };
     if (className) where.className = className;
     if (search) {
       where.OR = [
@@ -105,8 +119,9 @@ export class StudentsService {
   }
 
   async findOne(id: string) {
-    const s = await this.prisma.student.findUnique({
-      where: { id },
+    const schoolId = this.getSchoolId();
+    const s = await this.prisma.student.findFirst({
+      where: { id, schoolId },
       include: {
         user: { select: { name: true, email: true, isActive: true } },
         fees: true,
@@ -119,7 +134,8 @@ export class StudentsService {
   }
 
   async update(id: string, dto: UpdateStudentDto) {
-    const s = await this.prisma.student.findUnique({ where: { id } });
+    const schoolId = this.getSchoolId();
+    const s = await this.prisma.student.findFirst({ where: { id, schoolId } });
     if (!s) throw new NotFoundException('Student not found');
 
     const updateData: any = {};
@@ -145,17 +161,19 @@ export class StudentsService {
   }
 
   async remove(id: string) {
-    const s = await this.prisma.student.findUnique({ where: { id } });
+    const schoolId = this.getSchoolId();
+    const s = await this.prisma.student.findFirst({ where: { id, schoolId } });
     if (!s) throw new NotFoundException('Student not found');
     await this.prisma.user.delete({ where: { id: s.userId } });
     return { success: true, message: 'Student deleted successfully' };
   }
 
   async getStats() {
+    const schoolId = this.getSchoolId();
     const [total, byClass, feeStats] = await Promise.all([
-      this.prisma.student.count(),
-      this.prisma.student.groupBy({ by: ['className'], _count: true }),
-      this.prisma.fee.groupBy({ by: ['status'], _count: true, _sum: { paid: true, amount: true } }),
+      this.prisma.student.count({ where: { schoolId } }),
+      this.prisma.student.groupBy({ by: ['className'], where: { schoolId }, _count: true }),
+      this.prisma.fee.groupBy({ by: ['status'], where: { schoolId }, _count: true, _sum: { paid: true, amount: true } }),
     ]);
     return { success: true, data: { total, byClass, feeStats } };
   }

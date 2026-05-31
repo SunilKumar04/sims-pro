@@ -6,7 +6,7 @@ import { ConfirmProvider } from '@/components/ui/Confirm';
 
 export const metadata: Metadata = {
   title: 'SIMS Pro – School Information Management System',
-  description: 'Guru Nanak Public Senior Secondary School – Comprehensive School Management Portal',
+  description: 'School Information Management System – Comprehensive School Management Portal',
   icons: { icon: '/favicon.ico' },
 };
 

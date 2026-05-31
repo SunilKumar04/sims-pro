@@ -325,7 +325,7 @@ export default function LoginPage() {
       {!isCompact && (
       <div style={{ flex:1,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',padding:isTablet ? 36 : 60,background:'rgba(255,255,255,0.012)',borderLeft:'1px solid rgba(255,255,255,0.05)' }}>
         <div style={{ fontSize:80,marginBottom:28,lineHeight:1,filter:'drop-shadow(0 8px 24px rgba(212,160,23,0.2))' }}>🏫</div>
-        <h2 style={{ margin:0,fontSize:26,fontWeight:900,color:'white',textAlign:'center',lineHeight:1.3 }}>GNPSS School Portal</h2>
+        <h2 style={{ margin:0,fontSize:26,fontWeight:900,color:'white',textAlign:'center',lineHeight:1.3 }}>SIMS Pro School Portal</h2>
         <p style={{ margin:'14px 0 0',fontSize:14,color:'rgba(255,255,255,0.35)',textAlign:'center',maxWidth:300,lineHeight:1.8 }}>
           Manage students, teachers, attendance, marks, fees and more — all in one place.
         </p>

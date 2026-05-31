@@ -37,31 +37,29 @@ export class AuthService {
       where: { email: dto.email },
       include: { student: true, teacher: true },
     });
-    if (!user || !user.isActive) throw new UnauthorizedException('Invalid credentials');
+    if (!user || !user.isActive || user.role === Role.SUPER_ADMIN) {
+      throw new UnauthorizedException('Invalid credentials');
+    }
     const match = await bcrypt.compare(dto.password, user.password);
     if (!match) throw new UnauthorizedException('Invalid credentials');
 
     await this.prisma.user.update({ where: { id: user.id }, data: { lastLogin: new Date() } });
 
-    let profile: Record<string, any> = {
-      id: user.id, name: user.name, email: user.email, role: user.role,
-    };
-    if (user.role === Role.STUDENT && user.student) {
-      profile = { ...profile, studentId: user.student.id, className: user.student.className, roll: user.student.roll, parentName: user.student.parentName, phone: user.student.phone };
-    } else if ((user.role === Role.TEACHER || user.role === Role.ADMIN) && user.teacher) {
-      profile = { ...profile, teacherId: user.teacher.id, employeeCode: user.teacher.employeeCode, subject: user.teacher.subject, assignedClasses: user.teacher.assignedClasses };
+    return this.issueTokens(user);
+  }
+
+  async superAdminLogin(dto: LoginDto) {
+    const user = await this.prisma.user.findUnique({
+      where: { email: dto.email },
+    });
+    if (!user || !user.isActive || user.role !== Role.SUPER_ADMIN) {
+      throw new UnauthorizedException('Invalid credentials');
     }
+    const match = await bcrypt.compare(dto.password, user.password);
+    if (!match) throw new UnauthorizedException('Invalid credentials');
 
-    const payload = {
-      sub: user.id, email: user.email, role: user.role, name: user.name,
-      studentId: user.student?.id ?? undefined,
-      teacherId: user.teacher?.id ?? undefined,
-      className: user.student?.className ?? undefined,
-      roll:      user.student?.roll ?? undefined,
-    };
-
-    const accessToken = this.jwt.sign(payload);
-    return { success: true, message: 'Login successful', accessToken, user: profile };
+    await this.prisma.user.update({ where: { id: user.id }, data: { lastLogin: new Date() } });
+    return this.issueTokens(user, 'superadmin');
   }
 
   async register(dto: RegisterDto) {
@@ -100,6 +98,83 @@ export class AuthService {
     const hashed = await bcrypt.hash(dto.newPassword, 10);
     await this.prisma.user.update({ where: { id: user.id }, data: { password: hashed } });
     return { success: true, message: 'Password changed successfully' };
+  }
+
+  async getCurrentSchool(user: { schoolId?: string }) {
+    if (!user?.schoolId) throw new BadRequestException('School tenant not found');
+
+    const school = await this.prisma.school.findUnique({
+      where: { id: user.schoolId },
+    });
+    if (!school) throw new NotFoundException('School not found');
+
+    const settings = await this.prisma.schoolSetting.findMany({
+      where: { schoolId: school.id },
+    });
+
+    const settingsMap = settings.reduce<Record<string, any>>((acc, item) => {
+      acc[item.key] = item.value;
+      return acc;
+    }, {});
+
+    return {
+      success: true,
+      data: {
+        school,
+        settings: settingsMap,
+      },
+    };
+  }
+
+  async updateCurrentSchool(user: { schoolId?: string }, dto: any) {
+    if (!user?.schoolId) throw new BadRequestException('School tenant not found');
+
+    const school = await this.prisma.school.findUnique({
+      where: { id: user.schoolId },
+    });
+    if (!school) throw new NotFoundException('School not found');
+
+    const schoolData = {
+      name: dto.name ?? school.name,
+      schoolCode: dto.schoolCode ?? school.schoolCode,
+      contactPerson: dto.principal ?? dto.contactPerson ?? school.contactPerson,
+      email: dto.email ?? school.email,
+      phone: dto.phone ?? school.phone,
+      address: dto.address ?? school.address,
+    };
+
+    const updatedSchool = await this.prisma.school.update({
+      where: { id: school.id },
+      data: schoolData,
+    });
+
+    const settingsEntries = [
+      ['short', dto.short],
+      ['cbseCode', dto.cbseCode],
+      ['estd', dto.estd],
+      ['board', dto.board],
+    ].filter(([, value]) => value !== undefined && value !== null && value !== '');
+
+    await Promise.all(settingsEntries.map(([key, value]) =>
+      this.prisma.schoolSetting.upsert({
+        where: {
+          schoolId_key: {
+            schoolId: school.id,
+            key,
+          },
+        },
+        update: { value },
+        create: { schoolId: school.id, key, value },
+      })
+    ));
+
+    return {
+      success: true,
+      data: {
+        school: updatedSchool,
+        settings: Object.fromEntries(settingsEntries),
+      },
+    };
   }
 
   // ── Forgot Password ───────────────────────────────────────────
@@ -159,5 +234,51 @@ export class AuthService {
     });
 
     return { success: true, message: 'Password reset successfully. You can now log in.' };
+  }
+
+  private async issueTokens(user: any, scope: 'school' | 'superadmin' = 'school') {
+    let profile: Record<string, any> = {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      schoolId: user.schoolId ?? undefined,
+      scope,
+    };
+
+    if (user.role === Role.STUDENT && user.student) {
+      profile = {
+        ...profile,
+        studentId: user.student.id,
+        className: user.student.className,
+        roll: user.student.roll,
+        parentName: user.student.parentName,
+        phone: user.student.phone,
+      };
+    } else if ((user.role === Role.TEACHER || user.role === Role.ADMIN || user.role === Role.SCHOOL_ADMIN) && user.teacher) {
+      profile = {
+        ...profile,
+        teacherId: user.teacher.id,
+        employeeCode: user.teacher.employeeCode,
+        subject: user.teacher.subject,
+        assignedClasses: user.teacher.assignedClasses,
+      };
+    }
+
+    const payload = {
+      sub: user.id,
+      email: user.email,
+      role: user.role,
+      name: user.name,
+      scope,
+      schoolId: user.schoolId ?? undefined,
+      studentId: user.student?.id ?? undefined,
+      teacherId: user.teacher?.id ?? undefined,
+      className: user.student?.className ?? undefined,
+      roll: user.student?.roll ?? undefined,
+    };
+
+    const accessToken = this.jwt.sign(payload);
+    return { success: true, message: 'Login successful', accessToken, user: profile };
   }
 }

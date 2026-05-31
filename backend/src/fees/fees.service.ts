@@ -1,54 +1,68 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { FeeStatus } from '@prisma/client';
 import { buildInitialFeeData } from './fee-defaults';
+import { TenantContextService } from '../tenancy/tenant-context.service';
 
 @Injectable()
 export class FeesService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private readonly tenant: TenantContextService,
+  ) {}
+
+  private getSchoolId() {
+    const schoolId = this.tenant.get().schoolId;
+    if (!schoolId) throw new ForbiddenException('School tenant not found');
+    return schoolId;
+  }
 
   private async resolveStudentId(id: string): Promise<string | null> {
-    const byId = await this.prisma.student.findUnique({ where: { id } });
+    const schoolId = this.getSchoolId();
+    const byId = await this.prisma.student.findFirst({ where: { id, schoolId } });
     if (byId) return byId.id;
-    const byUser = await this.prisma.student.findUnique({ where: { userId: id } });
+    const byUser = await this.prisma.student.findFirst({ where: { userId: id, schoolId } });
     return byUser?.id ?? null;
   }
 
   private async ensureMissingFeeRecords() {
+    const schoolId = this.getSchoolId();
     const studentsWithoutFees = await this.prisma.student.findMany({
-      where: { fees: { none: {} } },
+      where: { schoolId, fees: { none: {} } },
       select: { id: true, className: true },
     });
 
     if (studentsWithoutFees.length === 0) return;
 
     await this.prisma.fee.createMany({
-      data: studentsWithoutFees.map((student) => buildInitialFeeData(student.id, student.className)),
+      data: studentsWithoutFees.map((student) => buildInitialFeeData(student.id, student.className, schoolId)),
     });
   }
 
   private async ensureStudentFeeRecord(studentId: string) {
+    const schoolId = this.getSchoolId();
     const existingFee = await this.prisma.fee.findFirst({
-      where: { studentId },
+      where: { studentId, schoolId },
       select: { id: true },
     });
     if (existingFee) return;
 
-    const student = await this.prisma.student.findUnique({
-      where: { id: studentId },
+    const student = await this.prisma.student.findFirst({
+      where: { id: studentId, schoolId },
       select: { id: true, className: true },
     });
     if (!student) return;
 
     await this.prisma.fee.create({
-      data: buildInitialFeeData(student.id, student.className),
+      data: buildInitialFeeData(student.id, student.className, schoolId),
     });
   }
 
   async findAll(query: any) {
     await this.ensureMissingFeeRecords();
+    const schoolId = this.getSchoolId();
 
-    const where: any = {};
+    const where: any = { schoolId };
     if (query.status) where.status = query.status.toUpperCase();
     if (query.term)   where.term   = { contains: query.term, mode: 'insensitive' };
 
@@ -95,14 +109,15 @@ export class FeesService {
     await this.ensureStudentFeeRecord(studentId);
 
     const fees = await this.prisma.fee.findMany({
-      where: { studentId },
+      where: { studentId, schoolId: this.getSchoolId() },
       orderBy: { createdAt: 'desc' },
     });
     return { success: true, data: fees };
   }
 
   async markPaid(id: string) {
-    const fee = await this.prisma.fee.findUnique({ where: { id } });
+    const schoolId = this.getSchoolId();
+    const fee = await this.prisma.fee.findFirst({ where: { id, schoolId } });
     if (!fee) throw new NotFoundException('Fee record not found');
 
     const receiptNo = `REC-${new Date().getFullYear()}-${Date.now().toString().slice(-6)}`;
@@ -114,7 +129,8 @@ export class FeesService {
   }
 
   async updatePayment(id: string, dto: any) {
-    const fee = await this.prisma.fee.findUnique({ where: { id } });
+    const schoolId = this.getSchoolId();
+    const fee = await this.prisma.fee.findFirst({ where: { id, schoolId } });
     if (!fee) throw new NotFoundException('Fee record not found');
 
     const paid   = dto.paid;
@@ -139,15 +155,16 @@ export class FeesService {
   }
 
   async create(dto: any) {
-    const fee = await this.prisma.fee.create({ data: dto });
+    const fee = await this.prisma.fee.create({ data: { ...dto, schoolId: this.getSchoolId() } });
     return { success: true, message: 'Fee record created', data: fee };
   }
 
   async getMonthlyStats() {
+    const schoolId = this.getSchoolId();
     const months      = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
     const currentYear = new Date().getFullYear();
     const fees        = await this.prisma.fee.findMany({
-      where: { status: FeeStatus.PAID, paidDate: { not: null } },
+      where: { schoolId, status: FeeStatus.PAID, paidDate: { not: null } },
     });
     const byMonth = months.map((m, i) => ({
       month:  m,

@@ -5,19 +5,21 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
 const SCHOOL = {
-  name:  process.env.NEXT_PUBLIC_SCHOOL_NAME  || 'Guru Nanak Public Senior Secondary School',
-  short: process.env.NEXT_PUBLIC_SCHOOL_SHORT || 'GNPSS',
-  code:  process.env.NEXT_PUBLIC_SCHOOL_CODE  || '1630247',
-  city:  process.env.NEXT_PUBLIC_SCHOOL_CITY  || 'Ludhiana, Punjab',
+  name:  process.env.NEXT_PUBLIC_SCHOOL_NAME  || 'Your School Name',
+  short: process.env.NEXT_PUBLIC_SCHOOL_SHORT || 'SIMS',
+  code:  process.env.NEXT_PUBLIC_SCHOOL_CODE  || 'School Code',
+  city:  process.env.NEXT_PUBLIC_SCHOOL_CITY  || 'City, State',
 };
+const CONTACT_EMAIL = process.env.NEXT_PUBLIC_SCHOOL_EMAIL || 'support@school.edu.in';
+const CONTACT_PHONE = process.env.NEXT_PUBLIC_SCHOOL_PHONE || '+91-00000-00000';
 
 const TICKER_ITEMS = [
-  '📢 Annual Sports Day – Registration open till 10th April 2024',
-  '📋 Parent-Teacher Meeting on 30th March 2024 from 9 AM',
-  '🎓 Board Exam Hall Tickets available on Student Portal',
-  '💰 Term 2 Fee deadline: 31st March 2024 – Pay to avoid late fee',
-  '🏖️ Summer vacation from 15th May to 30th June 2024',
-  '📚 New academic session registrations open for 2024–25',
+  '📢 Latest school announcements appear here',
+  '📋 Check notices, homework, and timetable updates in your portal',
+  '🎓 Access exam schedules and important academic updates',
+  '💰 View fee status and receipts from your account',
+  '🏫 Connect with teachers and administration in one place',
+  '📚 Stay informed with your school dashboard',
 ];
 
 const PORTALS = [
@@ -66,10 +68,10 @@ const PORTALS = [
 ];
 
 const STATS = [
-  { value: '1,240', label: 'Enrolled Students', color: 'text-yellow-400' },
-  { value: '64',    label: 'Faculty Members',   color: 'text-blue-400'   },
-  { value: '38',    label: 'Classrooms',         color: 'text-green-400'  },
-  { value: '99.2%', label: 'Board Result 2023',  color: 'text-red-400'   },
+  { value: process.env.NEXT_PUBLIC_PORTAL_STUDENTS || '—', label: 'Enrolled Students', color: 'text-yellow-400' },
+  { value: process.env.NEXT_PUBLIC_PORTAL_TEACHERS || '—', label: 'Faculty Members', color: 'text-blue-400' },
+  { value: process.env.NEXT_PUBLIC_PORTAL_CLASSROOMS || '—', label: 'Classrooms', color: 'text-green-400' },
+  { value: process.env.NEXT_PUBLIC_PORTAL_RESULT || '—', label: 'Board Results', color: 'text-red-400' },
 ];
 
 const FEATURES = [
@@ -139,7 +141,8 @@ export default function PortalPage() {
         <div className="text-center">
           <div className="font-lora text-base font-semibold" style={{ color: '#F0F4FF' }}>{SCHOOL.name}</div>
           <div className="text-[11px] mt-0.5" style={{ color: 'rgba(255,255,255,0.4)' }}>
-            Estd. 1985 · CBSE Affiliated · Code: {SCHOOL.code}
+            {process.env.NEXT_PUBLIC_SCHOOL_ESTD ? `Estd. ${process.env.NEXT_PUBLIC_SCHOOL_ESTD} · ` : ''}
+            {process.env.NEXT_PUBLIC_SCHOOL_BOARD || 'Affiliated School'} · Code: {SCHOOL.code}
           </div>
         </div>
 
@@ -160,7 +163,7 @@ export default function PortalPage() {
         <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider mb-6"
              style={{ background: 'rgba(212,160,23,0.12)', border: '1px solid rgba(212,160,23,0.3)', color: '#FFD966' }}>
           <span className="w-2 h-2 rounded-full bg-yellow-300 animate-pulse" />
-          Academic Year 2024–25
+          Academic Year {process.env.NEXT_PUBLIC_ACADEMIC_YEAR || 'Current Session'}
         </div>
         <h1 className="text-4xl lg:text-5xl font-black tracking-tight mb-4 leading-tight">
           One Portal, Every Service<br/>
@@ -234,7 +237,7 @@ export default function PortalPage() {
               style={{ borderColor: 'rgba(255,255,255,0.08)', background: 'rgba(0,0,0,0.2)' }}>
         <div className="text-sm" style={{ color: 'rgba(255,255,255,0.5)' }}>
           <strong className="text-white">{SCHOOL.name}</strong><br/>
-          {SCHOOL.city} · Phone: +91-161-2345678
+          {SCHOOL.city} · Phone: {CONTACT_PHONE}
         </div>
         <div className="flex gap-5">
           {['About School', 'Contact Us', 'Privacy Policy', 'Terms of Use'].map(l => (
@@ -242,7 +245,7 @@ export default function PortalPage() {
           ))}
         </div>
         <div className="glass rounded-xl px-4 py-2 text-sm" style={{ color: 'rgba(255,255,255,0.5)' }}>
-          📧 <span className="text-yellow-400 font-bold">itsupport@gnpss.edu.in</span>
+          📧 <span className="text-yellow-400 font-bold">{CONTACT_EMAIL}</span>
         </div>
       </footer>
     </div>

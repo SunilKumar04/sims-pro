@@ -5,7 +5,9 @@ export interface User {
   id: string;
   name: string;
   email: string;
-  role: 'ADMIN' | 'TEACHER' | 'STUDENT' | 'PARENT';
+  role: 'ADMIN' | 'SCHOOL_ADMIN' | 'TEACHER' | 'STUDENT' | 'PARENT' | 'ACCOUNTANT' | 'SUPER_ADMIN';
+  scope?: 'school' | 'superadmin';
+  schoolId?: string;
 
   // ✅ FIX (important)
   studentId?: string;
@@ -63,6 +65,9 @@ export const isAuthenticated = (): boolean => {
 
 export const getRoleRedirect = (role: string): string => {
   switch (role) {
+    case 'SUPER_ADMIN':
+      return '/superadmin/dashboard';
+    case 'SCHOOL_ADMIN':
     case 'ADMIN':
       return '/admin/dashboard';
     case 'TEACHER':

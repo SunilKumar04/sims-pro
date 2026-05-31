@@ -13,13 +13,14 @@ function extractGrade(className: string): string {
   return match?.[0] ?? '';
 }
 
-export function buildInitialFeeData(studentId: string, className: string) {
+export function buildInitialFeeData(studentId: string, className: string, schoolId?: string) {
   const grade = extractGrade(className);
   const structure =
     DEFAULT_FEE_STRUCTURE[grade] ??
     DEFAULT_FEE_STRUCTURE['10'];
 
   return {
+    ...(schoolId ? { schoolId } : {}),
     studentId,
     term: `Term 1 - ${new Date().getFullYear()}`,
     tuition: structure.tuition,

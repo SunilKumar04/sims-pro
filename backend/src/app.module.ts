@@ -1,9 +1,12 @@
 // src/app.module.ts
-import { Module } from '@nestjs/common';
+import { Module, MiddlewareConsumer, NestModule } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { PrismaModule } from './prisma/prisma.module';
 import { AuthModule } from './auth/auth.module';
+import { TenancyModule } from './tenancy/tenancy.module';
+import { TenantMiddleware } from './tenancy/tenant.middleware';
+import { SuperAdminModule } from './superadmin/superadmin.module';
 import { StudentsModule } from './students/students.module';
 import { TeachersModule } from './teachers/teachers.module';
 import { ClassesModule } from './classes/classes.module';
@@ -27,6 +30,8 @@ import { AssignmentsModule } from './assignments/assignments.module';
     ThrottlerModule.forRoot([{ ttl: 60000, limit: 100 }]),
     PrismaModule,
     AuthModule,
+    TenancyModule,
+    SuperAdminModule,
     StudentsModule,
     TeachersModule,
     ClassesModule,
@@ -43,4 +48,8 @@ import { AssignmentsModule } from './assignments/assignments.module';
     AssignmentsModule,
   ],
 })
-export class AppModule {}
+export class AppModule implements NestModule {
+  configure(consumer: MiddlewareConsumer) {
+    consumer.apply(TenantMiddleware).forRoutes('*');
+  }
+}

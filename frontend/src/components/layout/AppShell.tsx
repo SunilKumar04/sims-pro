@@ -26,6 +26,23 @@ const NAV: Record<string, { section: string; items: { id: string; icon: string; 
     ]},
     { section:'System',        items:[{ id:'settings',   icon:'⚙️', label:'Settings',           href:'/admin/settings'    }]},
   ],
+  SCHOOL_ADMIN: [
+    { section:'Main',          items:[{ id:'dashboard',  icon:'📊', label:'Dashboard',          href:'/admin/dashboard'   }]},
+    { section:'Academic',      items:[
+      { id:'students',          icon:'👨‍🎓', label:'Students',           href:'/admin/students'    },
+      { id:'teachers',          icon:'👩‍🏫', label:'Teachers',           href:'/admin/teachers'    },
+      { id:'classes',           icon:'🏫',  label:'Classes',            href:'/admin/classes'     },
+      { id:'timetable',         icon:'🗓️',  label:'Timetable',          href:'/admin/timetable'   },
+      { id:'exams',             icon:'📋',  label:'Exams & Date Sheet', href:'/admin/exams'       },
+      { id:'assignments',       icon:'📝',  label:'Assignments',        href:'/admin/assignments' },
+    ]},
+    { section:'Finance',       items:[{ id:'fees',       icon:'💰', label:'Fee Management',     href:'/admin/fees'        }]},
+    { section:'Communication', items:[
+      { id:'notices',           icon:'📢',  label:'Notice Board',       href:'/admin/notices'     },
+      { id:'homework',          icon:'📚',  label:'Homework',           href:'/admin/homework'    },
+    ]},
+    { section:'System',        items:[{ id:'settings',   icon:'⚙️', label:'Settings',           href:'/admin/settings'    }]},
+  ],
   TEACHER: [
     { section:'Main',          items:[{ id:'tdash',      icon:'📊', label:'Dashboard',          href:'/teacher/dashboard'   }]},
     { section:'Classroom',     items:[
@@ -55,7 +72,7 @@ const NAV: Record<string, { section: string; items: { id: string; icon: string; 
     { section:'Info',          items:[{ id:'snotices',   icon:'🔔', label:'Notices',             href:'/student/notices'            }]},
   ],
 };
-const ROLE_LABELS: Record<string,string> = { ADMIN:'Admin Panel', TEACHER:'Teacher Panel', STUDENT:'Student Panel', PARENT:'Parent Panel' };
+const ROLE_LABELS: Record<string,string> = { ADMIN:'School Panel', SCHOOL_ADMIN:'School Panel', TEACHER:'Teacher Panel', STUDENT:'Student Panel', PARENT:'Parent Panel' };
 const SIDEBAR_W = 248;
 
 interface Props { children?: React.ReactNode; title: string; subtitle?: string }
@@ -100,7 +117,9 @@ export default function AppShell({ children, title, subtitle }: Props) {
         icon: n.priority==='HIGH'?'🔴':n.priority==='MEDIUM'?'🟡':'📢',
         text: n.title,
         sub:  `${n.target} · ${n.createdAt?.slice(0,10)||''}`,
-        href: `/${u.role.toLowerCase()}/notices`,
+        href: ['ADMIN', 'SCHOOL_ADMIN'].includes(String(u.role).toUpperCase())
+          ? '/admin/notices'
+          : `/${String(u.role).toLowerCase()}/notices`,
       })));
     }).catch(() => {});
   }, []);
@@ -111,7 +130,7 @@ export default function AppShell({ children, title, subtitle }: Props) {
     const t = setTimeout(async () => {
       if (!user) return;
       const results: any[] = [];
-      if (String(user.role).toUpperCase() === 'ADMIN') {
+      if (['ADMIN', 'SCHOOL_ADMIN'].includes(String(user.role).toUpperCase())) {
         try {
           const r = await studentsApi.getAll({ search: searchQuery, limit: 5 });
           (r.data.data||[]).forEach((s:any) => results.push({ icon:'👨‍🎓', label:s.name, sub:`${s.className}·${s.roll}`, href:'/admin/students' }));
