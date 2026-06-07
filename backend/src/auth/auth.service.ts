@@ -8,6 +8,8 @@ import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcryptjs';
 import * as crypto from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
+import { TenantContextService } from '../tenancy/tenant-context.service';
+import { TenantResolutionService } from '../tenancy/tenant-resolution.service';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
@@ -21,6 +23,8 @@ export class AuthService {
     private prisma: PrismaService,
     private jwt: JwtService,
     private config: ConfigService,
+    private readonly tenantContext: TenantContextService,
+    private readonly tenantResolver: TenantResolutionService,
   ) {}
 
   async validateUser(email: string, password: string) {
@@ -33,6 +37,12 @@ export class AuthService {
   }
 
   async login(dto: LoginDto) {
+    const tenant = this.tenantContext.get();
+    const portalTenant = !tenant.schoolId && dto.portalSlug
+      ? await this.tenantResolver.resolveSchoolBySlug(dto.portalSlug)
+      : null;
+    const resolvedSchoolId = tenant.schoolId ?? portalTenant?.school?.id;
+
     const user = await this.prisma.user.findUnique({
       where: { email: dto.email },
       include: { student: true, teacher: true },
@@ -40,12 +50,15 @@ export class AuthService {
     if (!user || !user.isActive || user.role === Role.SUPER_ADMIN) {
       throw new UnauthorizedException('Invalid credentials');
     }
+    if (resolvedSchoolId && user.schoolId && user.schoolId !== resolvedSchoolId) {
+      throw new UnauthorizedException('Invalid credentials');
+    }
     const match = await bcrypt.compare(dto.password, user.password);
     if (!match) throw new UnauthorizedException('Invalid credentials');
 
     await this.prisma.user.update({ where: { id: user.id }, data: { lastLogin: new Date() } });
 
-    return this.issueTokens(user);
+    return this.issueTokens(user, 'school', user.schoolId ?? resolvedSchoolId ?? undefined);
   }
 
   async superAdminLogin(dto: LoginDto) {
@@ -101,42 +114,36 @@ export class AuthService {
   }
 
   async getCurrentSchool(user: { schoolId?: string }) {
-    if (!user?.schoolId) throw new BadRequestException('School tenant not found');
+    const tenantSchoolId = this.tenantContext.get().schoolId ?? user?.schoolId;
+    if (!tenantSchoolId) throw new BadRequestException('School tenant not found');
 
-    const school = await this.prisma.school.findUnique({
-      where: { id: user.schoolId },
-    });
-    if (!school) throw new NotFoundException('School not found');
-
-    const settings = await this.prisma.schoolSetting.findMany({
-      where: { schoolId: school.id },
-    });
-
-    const settingsMap = settings.reduce<Record<string, any>>((acc, item) => {
-      acc[item.key] = item.value;
-      return acc;
-    }, {});
+    const tenant = await this.tenantResolver.resolveSchoolById(tenantSchoolId);
+    if (!tenant?.school) throw new NotFoundException('School not found');
 
     return {
       success: true,
       data: {
-        school,
-        settings: settingsMap,
+        school: tenant.school,
+        settings: tenant.settings ?? {},
+        branding: tenant.branding ?? this.tenantResolver.buildSchoolBranding(tenant.settings ?? {}),
       },
     };
   }
 
   async updateCurrentSchool(user: { schoolId?: string }, dto: any) {
-    if (!user?.schoolId) throw new BadRequestException('School tenant not found');
+    const tenantSchoolId = this.tenantContext.get().schoolId ?? user?.schoolId;
+    if (!tenantSchoolId) throw new BadRequestException('School tenant not found');
 
     const school = await this.prisma.school.findUnique({
-      where: { id: user.schoolId },
+      where: { id: tenantSchoolId },
     });
     if (!school) throw new NotFoundException('School not found');
 
     const schoolData = {
       name: dto.name ?? school.name,
       schoolCode: dto.schoolCode ?? school.schoolCode,
+      subdomain: dto.subdomain ?? school.subdomain,
+      customDomain: dto.customDomain ?? school.customDomain,
       contactPerson: dto.principal ?? dto.contactPerson ?? school.contactPerson,
       email: dto.email ?? school.email,
       phone: dto.phone ?? school.phone,
@@ -236,13 +243,14 @@ export class AuthService {
     return { success: true, message: 'Password reset successfully. You can now log in.' };
   }
 
-  private async issueTokens(user: any, scope: 'school' | 'superadmin' = 'school') {
+  private async issueTokens(user: any, scope: 'school' | 'superadmin' = 'school', schoolIdOverride?: string) {
+    const effectiveSchoolId = schoolIdOverride ?? user.schoolId ?? this.tenantContext.get().schoolId ?? undefined;
     let profile: Record<string, any> = {
       id: user.id,
       name: user.name,
       email: user.email,
       role: user.role,
-      schoolId: user.schoolId ?? undefined,
+      schoolId: effectiveSchoolId,
       scope,
     };
 
@@ -271,7 +279,7 @@ export class AuthService {
       role: user.role,
       name: user.name,
       scope,
-      schoolId: user.schoolId ?? undefined,
+      schoolId: effectiveSchoolId,
       studentId: user.student?.id ?? undefined,
       teacherId: user.teacher?.id ?? undefined,
       className: user.student?.className ?? undefined,
@@ -279,6 +287,15 @@ export class AuthService {
     };
 
     const accessToken = this.jwt.sign(payload);
-    return { success: true, message: 'Login successful', accessToken, user: profile };
+    const school = effectiveSchoolId ? await this.tenantResolver.resolveSchoolById(effectiveSchoolId) : null;
+    return {
+      success: true,
+      message: 'Login successful',
+      accessToken,
+      user: profile,
+      school: school?.school ?? null,
+      settings: school?.settings ?? {},
+      branding: school?.branding ?? (school?.settings ? this.tenantResolver.buildSchoolBranding(school.settings) : undefined),
+    };
   }
 }

@@ -9,6 +9,7 @@ import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { CurrentUser } from './decorators/current-user.decorator';
+import { CurrentTenant } from '../tenancy/current-tenant.decorator';
 
 @ApiTags('Auth')
 @Controller('auth')
@@ -20,6 +21,23 @@ export class AuthController {
   @ApiOperation({ summary: 'Login with email and password' })
   login(@Body() dto: LoginDto) {
     return this.authService.login(dto);
+  }
+
+  @Get('tenant')
+  @ApiOperation({ summary: 'Resolve the current school tenant from hostname or portal slug' })
+  getTenant(@CurrentTenant() tenant: any) {
+    return {
+      success: true,
+      data: {
+        scope: tenant?.scope ?? 'school',
+        hostname: tenant?.hostname,
+        portalSlug: tenant?.portalSlug,
+        resolvedBy: tenant?.resolvedBy,
+        school: tenant?.school ?? null,
+        settings: tenant?.settings ?? {},
+        branding: tenant?.branding ?? null,
+      },
+    };
   }
 
   @Post('register')

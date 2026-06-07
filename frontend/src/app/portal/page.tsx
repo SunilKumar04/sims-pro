@@ -2,16 +2,7 @@
 // src/app/page.tsx  – Portal Home (like uims.cuchd.in)
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
-
-const SCHOOL = {
-  name:  process.env.NEXT_PUBLIC_SCHOOL_NAME  || 'Your School Name',
-  short: process.env.NEXT_PUBLIC_SCHOOL_SHORT || 'SIMS',
-  code:  process.env.NEXT_PUBLIC_SCHOOL_CODE  || 'School Code',
-  city:  process.env.NEXT_PUBLIC_SCHOOL_CITY  || 'City, State',
-};
-const CONTACT_EMAIL = process.env.NEXT_PUBLIC_SCHOOL_EMAIL || 'support@school.edu.in';
-const CONTACT_PHONE = process.env.NEXT_PUBLIC_SCHOOL_PHONE || '+91-00000-00000';
+import { useTenant } from '@/components/providers/TenantProvider';
 
 const TICKER_ITEMS = [
   '📢 Latest school announcements appear here',
@@ -87,6 +78,7 @@ const FEATURES = [
 
 export default function PortalPage() {
   const router = useRouter();
+  const tenant = useTenant();
   const [time, setTime] = useState('');
   const [date, setDate] = useState('');
 
@@ -101,8 +93,22 @@ export default function PortalPage() {
     return () => clearInterval(t);
   }, []);
 
+  const schoolName = tenant.school?.name || process.env.NEXT_PUBLIC_SCHOOL_NAME || 'Your School Name';
+  const schoolCode = tenant.school?.schoolCode || process.env.NEXT_PUBLIC_SCHOOL_CODE || 'School Code';
+  const schoolCity = tenant.school?.address || process.env.NEXT_PUBLIC_SCHOOL_CITY || 'City, State';
+  const contactEmail = tenant.school?.email || process.env.NEXT_PUBLIC_SCHOOL_EMAIL || 'support@school.edu.in';
+  const contactPhone = tenant.school?.phone || process.env.NEXT_PUBLIC_SCHOOL_PHONE || '+91-00000-00000';
+  const portalSlug = tenant.portalSlug || tenant.school?.slug || '';
+  const portalHome = portalSlug ? `/portal/${portalSlug}` : '/';
+  const branding = tenant.branding;
+  const tickerBackground = `linear-gradient(90deg, ${branding.primaryColor}, ${branding.accentColor})`;
+  const headerGlow = `linear-gradient(90deg, ${branding.primaryColor}, ${branding.secondaryColor}, ${branding.accentColor})`;
+
   return (
-    <div className="min-h-screen flex flex-col" style={{ background: 'linear-gradient(160deg,#0A1628 0%,#0F2044 50%,#0A1628 100%)' }}>
+    <div
+      className="min-h-screen flex flex-col"
+      style={{ background: `linear-gradient(160deg, ${branding.backgroundColor} 0%, #0F2044 50%, ${branding.backgroundColor} 100%)` }}
+    >
 
       {/* ── BACKGROUND ── */}
       <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
@@ -112,15 +118,15 @@ export default function PortalPage() {
       </div>
 
       {/* ── TICKER ── */}
-      <div className="relative z-10 overflow-hidden" style={{ background: 'linear-gradient(90deg,#D4A017,#F0C040)', padding: '9px 0' }}>
+      <div className="relative z-10 overflow-hidden" style={{ background: tickerBackground, padding: '9px 0' }}>
         <div className="absolute left-0 top-0 bottom-0 flex items-center px-4 z-10"
-             style={{ background: '#0A1628', color: '#F0C040', fontSize: 11, fontWeight: 800, letterSpacing: 1, textTransform: 'uppercase', borderRight: '2px solid #D4A017', whiteSpace: 'nowrap' }}>
+             style={{ background: branding.backgroundColor, color: branding.accentColor, fontSize: 11, fontWeight: 800, letterSpacing: 1, textTransform: 'uppercase', borderRight: `2px solid ${branding.primaryColor}`, whiteSpace: 'nowrap' }}>
           📢 Latest
         </div>
         <div className="ticker-run flex items-center whitespace-nowrap pl-28">
           {[...TICKER_ITEMS, ...TICKER_ITEMS].map((item, i) => (
-            <span key={i} className="inline-flex items-center gap-2 px-10 text-xs font-semibold text-navy-800" style={{ color: '#0A1628' }}>
-              <span className="w-1.5 h-1.5 rounded-full bg-navy-800 flex-shrink-0" />
+            <span key={i} className="inline-flex items-center gap-2 px-10 text-xs font-semibold text-navy-800" style={{ color: branding.backgroundColor }}>
+              <span className="w-1.5 h-1.5 rounded-full bg-navy-800 flex-shrink-0" style={{ backgroundColor: branding.backgroundColor }} />
               {item}
             </span>
           ))}
@@ -130,19 +136,30 @@ export default function PortalPage() {
       {/* ── HEADER ── */}
       <header className="relative z-10 flex flex-wrap items-center justify-between gap-4 border-b px-5 py-5 md:px-10" style={{ minHeight: 80, borderColor: 'rgba(255,255,255,0.08)', backdropFilter: 'blur(20px)' }}>
         <div className="flex items-center gap-4">
-          <div className="w-14 h-14 rounded-2xl flex items-center justify-center text-3xl flex-shrink-0"
-               style={{ background: 'linear-gradient(135deg,#D4A017,#F0C040)', boxShadow: '0 4px 20px rgba(212,160,23,0.4)' }}>🎓</div>
-          <div>
-            <div className="text-lg font-black tracking-tight leading-tight">SIMS <span className="text-yellow-400">Pro</span></div>
+          <button
+            type="button"
+            onClick={() => router.push(portalHome)}
+            className="w-14 h-14 rounded-2xl flex items-center justify-center text-3xl flex-shrink-0 overflow-hidden"
+            style={{ border: 'none', padding: 0, cursor: 'pointer', background: `linear-gradient(135deg, ${branding.primaryColor}, ${branding.accentColor})`, boxShadow: `0 4px 20px ${branding.primaryColor}55` }}
+          >
+            {branding.logoUrl ? <img src={branding.logoUrl} alt={schoolName} className="w-full h-full object-cover" /> : '🎓'}
+          </button>
+          <button
+            type="button"
+            onClick={() => router.push(portalHome)}
+            className="text-left"
+            style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}
+          >
+            <div className="text-lg font-black tracking-tight leading-tight">{schoolName} <span style={{ color: branding.accentColor }}>{branding.shortName}</span></div>
             <div className="text-[10px] font-medium tracking-wide" style={{ color: 'rgba(255,255,255,0.4)' }}>School Information Management System</div>
-          </div>
+          </button>
         </div>
 
         <div className="text-center">
-          <div className="font-lora text-base font-semibold" style={{ color: '#F0F4FF' }}>{SCHOOL.name}</div>
+          <div className="font-lora text-base font-semibold" style={{ color: '#F0F4FF' }}>{schoolName}</div>
           <div className="text-[11px] mt-0.5" style={{ color: 'rgba(255,255,255,0.4)' }}>
             {process.env.NEXT_PUBLIC_SCHOOL_ESTD ? `Estd. ${process.env.NEXT_PUBLIC_SCHOOL_ESTD} · ` : ''}
-            {process.env.NEXT_PUBLIC_SCHOOL_BOARD || 'Affiliated School'} · Code: {SCHOOL.code}
+            {process.env.NEXT_PUBLIC_SCHOOL_BOARD || 'Affiliated School'} · Code: {schoolCode}
           </div>
         </div>
 
@@ -152,7 +169,7 @@ export default function PortalPage() {
             <div className="text-[11px] mt-0.5" style={{ color: 'rgba(255,255,255,0.4)' }}>{date}</div>
           </div>
           <button className="px-4 py-2 rounded-lg text-sm font-semibold transition-all"
-                  style={{ background: 'rgba(30,144,255,0.15)', border: '1px solid rgba(30,144,255,0.3)', color: '#93C5FD' }}>
+                  style={{ background: `${branding.primaryColor}22`, border: `1px solid ${branding.primaryColor}44`, color: branding.accentColor }}>
             📞 Help Desk
           </button>
         </div>
@@ -161,13 +178,13 @@ export default function PortalPage() {
       {/* ── HERO ── */}
       <div className="relative z-10 text-center pt-14 pb-10 px-10">
         <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider mb-6"
-             style={{ background: 'rgba(212,160,23,0.12)', border: '1px solid rgba(212,160,23,0.3)', color: '#FFD966' }}>
-          <span className="w-2 h-2 rounded-full bg-yellow-300 animate-pulse" />
+             style={{ background: `${branding.accentColor}22`, border: `1px solid ${branding.accentColor}44`, color: branding.accentColor }}>
+          <span className="w-2 h-2 rounded-full animate-pulse" style={{ backgroundColor: branding.accentColor }} />
           Academic Year {process.env.NEXT_PUBLIC_ACADEMIC_YEAR || 'Current Session'}
         </div>
         <h1 className="text-4xl lg:text-5xl font-black tracking-tight mb-4 leading-tight">
           One Portal, Every Service<br/>
-          <span className="bg-clip-text text-transparent" style={{ backgroundImage: 'linear-gradient(90deg,#D4A017,#F0C040,#00D4FF)' }}>
+          <span className="bg-clip-text text-transparent" style={{ backgroundImage: headerGlow }}>
             All Under One Roof
           </span>
         </h1>
@@ -196,7 +213,7 @@ export default function PortalPage() {
           <div key={p.id}
                className={`rounded-2xl border p-8 cursor-pointer transition-all duration-300 hover:-translate-y-2 hover:shadow-2xl glass ${p.border} bg-gradient-to-b ${p.gradient} animate-fade-up`}
                style={{ animationDelay: `${i * 0.1}s` }}
-               onClick={() => router.push(`/login?role=${p.id}`)}>
+               onClick={() => router.push(portalSlug ? `/portal/${portalSlug}/login?role=${p.id}` : `/login?role=${p.id}`)}>
 
             <div className={`w-18 h-18 rounded-2xl flex items-center justify-center text-4xl mb-6 ${p.iconBg}`}
                  style={{ width: 72, height: 72 }}>
@@ -209,11 +226,11 @@ export default function PortalPage() {
             <ul className="space-y-2 mb-7">
               {p.features.map(f => (
                 <li key={f} className="flex items-center gap-2 text-sm" style={{ color: 'rgba(255,255,255,0.7)' }}>
-                  <span className={`font-bold text-xs ${p.checkColor}`}>✓</span>
-                  {f}
-                </li>
-              ))}
-            </ul>
+              <span className={`font-bold text-xs ${p.checkColor}`}>✓</span>
+              {f}
+            </li>
+          ))}
+        </ul>
 
             <button className={`w-full py-3 rounded-xl text-sm font-bold tracking-wide transition-all ${p.btnCls} hover:-translate-y-0.5`}>
               {p.btn}
@@ -236,8 +253,8 @@ export default function PortalPage() {
       <footer className="relative z-10 mt-auto flex flex-col items-start justify-between gap-3 border-t px-5 py-7 md:flex-row md:items-center md:px-10"
               style={{ borderColor: 'rgba(255,255,255,0.08)', background: 'rgba(0,0,0,0.2)' }}>
         <div className="text-sm" style={{ color: 'rgba(255,255,255,0.5)' }}>
-          <strong className="text-white">{SCHOOL.name}</strong><br/>
-          {SCHOOL.city} · Phone: {CONTACT_PHONE}
+          <strong className="text-white">{schoolName}</strong><br/>
+          {schoolCity} · Phone: {contactPhone}
         </div>
         <div className="flex gap-5">
           {['About School', 'Contact Us', 'Privacy Policy', 'Terms of Use'].map(l => (
@@ -245,7 +262,7 @@ export default function PortalPage() {
           ))}
         </div>
         <div className="glass rounded-xl px-4 py-2 text-sm" style={{ color: 'rgba(255,255,255,0.5)' }}>
-          📧 <span className="text-yellow-400 font-bold">{CONTACT_EMAIL}</span>
+          📧 <span className="text-yellow-400 font-bold">{contactEmail}</span>
         </div>
       </footer>
     </div>

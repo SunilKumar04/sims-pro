@@ -8,6 +8,9 @@ type School = {
   id: string;
   name: string;
   schoolCode: string;
+  slug?: string;
+  subdomain?: string | null;
+  customDomain?: string | null;
   contactPerson: string;
   email: string;
   phone?: string | null;
@@ -20,9 +23,29 @@ type School = {
   }>;
 };
 
+const domainBadge = (school: School) => {
+  const hasCustomDomain = Boolean(school.customDomain);
+  const hasSubdomain = Boolean(school.subdomain);
+
+  if (hasCustomDomain && hasSubdomain) {
+    return { label: 'Custom + Subdomain', color: '#22c55e', background: 'rgba(34,197,94,0.12)' };
+  }
+  if (hasCustomDomain) {
+    return { label: 'Custom Domain', color: '#60a5fa', background: 'rgba(96,165,250,0.12)' };
+  }
+  if (hasSubdomain) {
+    return { label: 'SaaS Subdomain', color: '#f0c040', background: 'rgba(240,192,64,0.12)' };
+  }
+  return { label: 'Default Domain', color: '#fca5a5', background: 'rgba(252,165,165,0.12)' };
+};
+
+const portalPath = (slug?: string) => (slug ? `/portal/${slug}` : '');
+
 const emptyForm = {
   name: '',
   schoolCode: '',
+  subdomain: '',
+  customDomain: '',
   contactPerson: '',
   email: '',
   phone: '',
@@ -67,6 +90,8 @@ export default function SchoolsPage() {
       const payload = {
         ...form,
         schoolCode: form.schoolCode || undefined,
+        subdomain: form.subdomain || undefined,
+        customDomain: form.customDomain || undefined,
         phone: form.phone || undefined,
         address: form.address || undefined,
         tempPassword: form.tempPassword || undefined,
@@ -119,6 +144,8 @@ export default function SchoolsPage() {
           {[
             ['name', 'School Name'],
             ['schoolCode', 'School Code'],
+            ['subdomain', 'Subdomain'],
+            ['customDomain', 'Custom Domain'],
             ['contactPerson', 'Contact Person'],
             ['email', 'School Email'],
             ['phone', 'Phone'],
@@ -156,6 +183,26 @@ export default function SchoolsPage() {
                 <div style={{ fontSize: 13, opacity: 0.85, marginTop: 5 }}>
                   {school.contactPerson} • {school.email}
                 </div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 6, alignItems: 'center' }}>
+                  <span style={{ padding: '4px 10px', borderRadius: 999, fontSize: 11, fontWeight: 700, background: domainBadge(school).background, color: domainBadge(school).color }}>
+                    {domainBadge(school).label}
+                  </span>
+                  <span style={{ fontSize: 12, opacity: 0.72 }}>
+                    {school.slug ? `Slug: ${school.slug}` : 'No slug'}{school.subdomain ? ` • Subdomain: ${school.subdomain}` : ' • No subdomain'}{school.customDomain ? ` • Domain: ${school.customDomain}` : ''}
+                  </span>
+                </div>
+                {school.slug ? (
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 8, alignItems: 'center' }}>
+                    <span style={{ fontSize: 12, opacity: 0.75 }}>Portal: {portalPath(school.slug)}</span>
+                    <button
+                      type="button"
+                      onClick={() => navigator.clipboard?.writeText(window.location.origin + portalPath(school.slug))}
+                      style={{ padding: '5px 10px', borderRadius: 8, background: 'rgba(255,255,255,0.08)', color: '#fff', border: 'none', fontSize: 12 }}
+                    >
+                      Copy link
+                    </button>
+                  </div>
+                ) : null}
                 <div style={{ fontSize: 12, opacity: 0.65, marginTop: 4 }}>
                   {school.subscriptions?.[0]?.plan?.name ? `Plan: ${school.subscriptions[0].plan?.name}` : 'No active plan'} {school.subscriptions?.[0]?.expiryDate ? `• Expiry: ${new Date(school.subscriptions[0].expiryDate).toLocaleDateString()}` : ''}
                 </div>

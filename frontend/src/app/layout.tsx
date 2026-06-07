@@ -3,6 +3,7 @@ import type { Metadata } from 'next';
 import './globals.css';
 import { ToastProvider } from '@/components/ui/Toast';
 import { ConfirmProvider } from '@/components/ui/Confirm';
+import { TenantProvider } from '@/components/providers/TenantProvider';
 
 export const metadata: Metadata = {
   title: 'SIMS Pro – School Information Management System',
@@ -20,9 +21,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         />
       </head>
       <body className="bg-navy-800 text-white antialiased">
-        {children}
-        <ToastProvider />
-        <ConfirmProvider />
+        <TenantProvider>
+          {children}
+          <ToastProvider />
+          <ConfirmProvider />
+        </TenantProvider>
       </body>
     </html>
   );

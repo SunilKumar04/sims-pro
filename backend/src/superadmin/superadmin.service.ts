@@ -17,6 +17,14 @@ function slugify(value: string) {
     .replace(/^-+|-+$/g, '');
 }
 
+function normalizeDomain(value?: string | null) {
+  return value?.trim().toLowerCase().replace(/^https?:\/\//, '').replace(/\/+$/, '') || undefined;
+}
+
+function normalizeColor(value?: string | null) {
+  return value?.trim() || undefined;
+}
+
 function schoolCodeFromName(name: string) {
   const suffix = Math.random().toString(36).slice(2, 6).toUpperCase();
   return `SCH-${slugify(name).slice(0, 6).toUpperCase() || 'SCH'}-${suffix}`;
@@ -279,6 +287,8 @@ export class SuperAdminService {
           schoolCode,
           name: dto.name,
           slug: slugify(dto.name),
+          subdomain: normalizeDomain(dto.subdomain),
+          customDomain: normalizeDomain(dto.customDomain),
           contactPerson: dto.contactPerson,
           email: dto.email,
           phone: dto.phone,
@@ -337,6 +347,12 @@ export class SuperAdminService {
         data: [
           { schoolId: createdSchool.id, key: 'academic_year', value: { label: new Date().getFullYear() } },
           { schoolId: createdSchool.id, key: 'currency', value: { code: 'INR' } },
+          ...(dto.logoUrl ? [{ schoolId: createdSchool.id, key: 'logoUrl', value: dto.logoUrl }] : []),
+          ...(dto.primaryColor ? [{ schoolId: createdSchool.id, key: 'primaryColor', value: normalizeColor(dto.primaryColor) }] : []),
+          ...(dto.secondaryColor ? [{ schoolId: createdSchool.id, key: 'secondaryColor', value: normalizeColor(dto.secondaryColor) }] : []),
+          ...(dto.accentColor ? [{ schoolId: createdSchool.id, key: 'accentColor', value: normalizeColor(dto.accentColor) }] : []),
+          ...(dto.backgroundColor ? [{ schoolId: createdSchool.id, key: 'backgroundColor', value: normalizeColor(dto.backgroundColor) }] : []),
+          ...(dto.themeMode ? [{ schoolId: createdSchool.id, key: 'themeMode', value: dto.themeMode }] : []),
         ],
       });
 
@@ -370,6 +386,8 @@ export class SuperAdminService {
       data: {
         name: dto.name,
         schoolCode: dto.schoolCode,
+        subdomain: normalizeDomain(dto.subdomain),
+        customDomain: normalizeDomain(dto.customDomain),
         contactPerson: dto.contactPerson,
         email: dto.email,
         phone: dto.phone,
@@ -377,7 +395,33 @@ export class SuperAdminService {
       },
     });
 
-    return { success: true, data: updated };
+    const settingsEntries = [
+      ['short', dto.short],
+      ['cbseCode', dto.cbseCode],
+      ['estd', dto.estd],
+      ['board', dto.board],
+      ['logoUrl', dto.logoUrl],
+      ['primaryColor', dto.primaryColor],
+      ['secondaryColor', dto.secondaryColor],
+      ['accentColor', dto.accentColor],
+      ['backgroundColor', dto.backgroundColor],
+      ['themeMode', dto.themeMode],
+    ].filter(([, value]) => value !== undefined && value !== null && value !== '');
+
+    await Promise.all(settingsEntries.map(([key, value]) =>
+      this.prisma.schoolSetting.upsert({
+        where: {
+          schoolId_key: {
+            schoolId: school.id,
+            key,
+          },
+        },
+        update: { value },
+        create: { schoolId: school.id, key, value },
+      })
+    ));
+
+    return { success: true, data: { school: updated, settings: Object.fromEntries(settingsEntries) } };
   }
 
   async activateSchool(id: string) {

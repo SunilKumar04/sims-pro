@@ -5,6 +5,12 @@ export interface TenantContext {
   scope?: 'school' | 'superadmin';
   role?: string;
   schoolId?: string;
+  hostname?: string;
+  portalSlug?: string;
+  resolvedBy?: 'customDomain' | 'subdomain' | 'slug' | 'tokenSchool' | 'default';
+  school?: Record<string, any>;
+  settings?: Record<string, any>;
+  branding?: Record<string, any>;
   userId?: string;
 }
 

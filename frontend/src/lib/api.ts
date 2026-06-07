@@ -27,7 +27,14 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response: AxiosResponse) => response,
   (error) => {
-    if (error.response?.status === 401) {
+    const requestUrl = String(error.config?.url || '');
+    const isAuthAttempt =
+      requestUrl.includes('/auth/login') ||
+      requestUrl.includes('/superadmin/auth/login') ||
+      requestUrl.includes('/auth/forgot-password') ||
+      requestUrl.includes('/auth/reset-password');
+
+    if (error.response?.status === 401 && !isAuthAttempt) {
       if (typeof window !== 'undefined') {
         localStorage.removeItem('sims_token');
         localStorage.removeItem('sims_user');
@@ -44,9 +51,10 @@ api.interceptors.response.use(
 // AUTH
 // ══════════════════════════════════════
 export const authApi = {
-  login:          (email: string, password: string) => api.post('/auth/login', { email, password }),
+  login:          (email: string, password: string, portalSlug?: string) => api.post('/auth/login', { email, password, portalSlug }),
   superAdminLogin: (email: string, password: string) => api.post('/superadmin/auth/login', { email, password }),
   register:       (data: any)                        => api.post('/auth/register', data),
+  getTenant:      (params?: Record<string, any>)     => api.get('/auth/tenant', { params }),
   getMe:          ()                                 => api.get('/auth/me'),
   getSchool:      ()                                 => api.get('/auth/school'),
   updateSchool:   (data: any)                        => api.patch('/auth/school', data),

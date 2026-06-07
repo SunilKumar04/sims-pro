@@ -106,6 +106,8 @@ model School {
   schoolCode      String             @unique
   name            String
   slug            String             @unique
+  subdomain       String?            @unique
+  customDomain    String?            @unique
   contactPerson   String
   email           String             @unique
   phone           String?

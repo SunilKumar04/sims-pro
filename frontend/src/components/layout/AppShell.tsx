@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
-import { getUser, logout } from '@/lib/auth';
+import { getSchoolLoginPath, getUser, logout } from '@/lib/auth';
 import { getInitials } from '@/lib/utils';
 import { noticesApi, studentsApi } from '@/lib/api';
 
@@ -108,7 +108,12 @@ export default function AppShell({ children, title, subtitle }: Props) {
 
   useEffect(() => {
     const u = getUser();
-    if (!u) { router.push('/login'); return; }
+    if (!u) {
+      const search = typeof window !== 'undefined' ? window.location.search : '';
+      const returnTo = search ? `${pathname}${search}` : pathname;
+      router.push(getSchoolLoginPath(undefined, returnTo));
+      return;
+    }
     setUser(u);
     noticesApi.getAll({ limit: 5 }).then(r => {
       const notices = r.data.data || [];
@@ -122,7 +127,7 @@ export default function AppShell({ children, title, subtitle }: Props) {
           : `/${String(u.role).toLowerCase()}/notices`,
       })));
     }).catch(() => {});
-  }, []);
+  }, [pathname, router]);
 
   // Search
   useEffect(() => {

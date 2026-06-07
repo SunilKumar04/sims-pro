@@ -38,17 +38,7 @@ async function bootstrap() {
 
   // ── CORS (Production Ready) ──
   app.enableCors({
-    origin: (origin, callback) => {
-      // allow requests with no origin (mobile apps, postman)
-      if (!origin) return callback(null, true);
-
-      if (clientUrls.has(origin) || clientUrlRegex?.test(origin)) {
-        callback(null, true);
-      } else {
-        console.warn(`Blocked by CORS: ${origin}`);
-        callback(new Error('Not allowed by CORS'));
-      }
-    },
+    origin: true,
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'Origin'],
