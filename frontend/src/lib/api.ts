@@ -158,6 +158,7 @@ export const feesApi = {
   getAll:            (params?: any)              => api.get('/fees', { params }),
   getByStudent:      (studentId: string)          => api.get(`/fees/student/${studentId}`),
   create:            (data: any)                  => api.post('/fees', data),
+  repair:            (data?: any)                 => api.post('/fees/repair', data || {}),
   markPaid:          (id: string)                 => api.patch(`/fees/${id}/mark-paid`),
   updatePayment:     (id: string, data: any)      => api.patch(`/fees/${id}/payment`, data),
   getMonthlyStats:   ()                           => api.get('/fees/monthly-stats'),

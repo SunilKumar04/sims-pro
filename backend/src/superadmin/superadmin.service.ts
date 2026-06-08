@@ -206,7 +206,7 @@ export class SuperAdminService {
 
   async listSchoolAdmins(schoolId: string) {
     const admins = await this.prisma.user.findMany({
-      where: { schoolId, role: Role.SCHOOL_ADMIN },
+      where: { schoolId, role: Role.ADMIN },
       select: { id: true, name: true, email: true, phone: true, isActive: true, createdAt: true, lastLogin: true },
       orderBy: { createdAt: 'desc' },
     });
@@ -230,7 +230,7 @@ export class SuperAdminService {
         password: hashed,
         name: dto.name,
         phone: dto.phone,
-        role: Role.SCHOOL_ADMIN,
+        role: Role.ADMIN,
         isActive: true,
       },
       select: { id: true, name: true, email: true, phone: true, isActive: true, createdAt: true },
@@ -338,7 +338,7 @@ export class SuperAdminService {
           email: dto.adminEmail,
           password: hashed,
           name: dto.contactPerson,
-          role: Role.SCHOOL_ADMIN,
+          role: Role.ADMIN,
           isActive: true,
         },
       });

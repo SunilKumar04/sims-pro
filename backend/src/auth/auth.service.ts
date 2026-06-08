@@ -160,6 +160,7 @@ export class AuthService {
       ['cbseCode', dto.cbseCode],
       ['estd', dto.estd],
       ['board', dto.board],
+      ['feeStructure', dto.feeStructure],
     ].filter(([, value]) => value !== undefined && value !== null && value !== '');
 
     await Promise.all(settingsEntries.map(([key, value]) =>
@@ -263,7 +264,7 @@ export class AuthService {
         parentName: user.student.parentName,
         phone: user.student.phone,
       };
-    } else if ((user.role === Role.TEACHER || user.role === Role.ADMIN || user.role === Role.SCHOOL_ADMIN) && user.teacher) {
+    } else if ((user.role === Role.TEACHER || user.role === Role.ADMIN) && user.teacher) {
       profile = {
         ...profile,
         teacherId: user.teacher.id,

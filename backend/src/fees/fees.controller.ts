@@ -12,6 +12,7 @@ export class FeesController {
   @Post() @Roles('ADMIN') create(@Body() dto: any) { return this.s.create(dto); }
   @Get() @Roles('ADMIN') findAll(@Query() q: any) { return this.s.findAll(q); }
   @Get('monthly-stats') @Roles('ADMIN') getMonthlyStats() { return this.s.getMonthlyStats(); }
+  @Post('repair') @Roles('ADMIN') repair(@Body() body: any) { return this.s.repairFeeRecords(body); }
   @Get('student/:studentId') @Roles('ADMIN','STUDENT','PARENT') findByStudent(@Param('studentId') id: string) { return this.s.findByStudent(id); }
   @Patch(':id/mark-paid') @Roles('ADMIN') markPaid(@Param('id') id: string) { return this.s.markPaid(id); }
   @Patch(':id/payment') @Roles('ADMIN') updatePayment(@Param('id') id: string, @Body() dto: any) { return this.s.updatePayment(id, dto); }

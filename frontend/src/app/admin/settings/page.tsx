@@ -70,6 +70,19 @@ const mapSchoolProfile = (data: any) => {
   };
 };
 
+const normalizeFeeStructure = (value: any) => {
+  if (!Array.isArray(value)) return null;
+  return value
+    .map((item: any) => ({
+      grade: String(item?.grade ?? '').trim(),
+      tuition: Number(item?.tuition) || 0,
+      transport: Number(item?.transport) || 0,
+      lab: Number(item?.lab) || 0,
+      sports: Number(item?.sports) || 0,
+    }))
+    .filter((item) => item.grade);
+};
+
 export default function AdminSettings() {
   const user = getUser();
   const [tab, setTab] = useState<Tab>('school');
@@ -118,10 +131,13 @@ export default function AdminSettings() {
   const saveFees = async () => {
     setSavingFees(true);
     try {
+      await authApi.updateSchool({ feeStructure: fees });
       if (typeof window !== 'undefined') {
         localStorage.setItem(feesStorageKey(schoolId), JSON.stringify(fees));
       }
       toast.success('Fee Structure Saved', 'Fee amounts updated for all grades');
+    } catch (error: any) {
+      toast.error('Save Failed', error?.message || 'Unable to save fee structure');
     } finally {
       setSavingFees(false);
     }
@@ -169,10 +185,14 @@ export default function AdminSettings() {
     setLoadingSchool(true);
 
     (async () => {
+      let backendFeeStructure: any[] | null = null;
       try {
         const res = await authApi.getSchool();
         if (cancelled) return;
-        setSchool(mapSchoolProfile(res.data?.data));
+        const data = res.data?.data;
+        setSchool(mapSchoolProfile(data));
+        backendFeeStructure = normalizeFeeStructure(data?.settings?.feeStructure);
+        if (backendFeeStructure?.length) setFees(backendFeeStructure);
       } catch {
         if (!cancelled) setSchool(EMPTY_SCHOOL);
       } finally {
@@ -180,10 +200,16 @@ export default function AdminSettings() {
       }
 
       if (typeof window === 'undefined') return;
-      const f = localStorage.getItem(feesStorageKey(user.schoolId));
       const p = localStorage.getItem(prefsStorageKey(user.schoolId));
-      if (f) try { if (!cancelled) setFees(JSON.parse(f)); } catch {}
       if (p) try { if (!cancelled) setPrefs(JSON.parse(p)); } catch {}
+
+      if (!backendFeeStructure?.length) {
+        const f = localStorage.getItem(feesStorageKey(user.schoolId));
+        if (f) try {
+          const storedFees = normalizeFeeStructure(JSON.parse(f));
+          if (!cancelled && storedFees?.length) setFees(storedFees);
+        } catch {}
+      }
     })();
 
     return () => { cancelled = true; };
@@ -263,7 +289,7 @@ export default function AdminSettings() {
           <div className="sims-section-header px-5 py-5 sm:px-6" style={{borderBottom:'1px solid rgba(255,255,255,0.07)'}}>
             <div>
               <h2 className="text-base font-bold text-white">Annual Fee Structure</h2>
-              <p className="text-xs mt-0.5" style={{color:'rgba(255,255,255,0.4)'}}>Edit fee amounts per grade — saved locally</p>
+              <p className="text-xs mt-0.5" style={{color:'rgba(255,255,255,0.4)'}}>Edit fee amounts per grade — saved to school settings</p>
             </div>
             <button onClick={saveFees} disabled={savingFees}
                     className="w-full px-5 py-2.5 rounded-xl text-sm font-black hover:-translate-y-0.5 transition-all disabled:opacity-60 sm:w-auto"

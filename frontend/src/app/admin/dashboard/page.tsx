@@ -30,7 +30,10 @@ export default function AdminDashboard() {
 
   if (loading) return (
     <AppShell title="Dashboard" subtitle="Loading your overview...">
-      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div
+        className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2"
+        style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))' }}
+      >
         {[...Array(4)].map((_, i) => (
           <div key={i} className="skeleton h-32 rounded-2xl" />
         ))}
@@ -49,6 +52,7 @@ export default function AdminDashboard() {
     { icon: '👩‍🏫', label: 'Faculty Members',   value: stats?.overview?.teachers || 0, color: 'blue',  change: '↑ Active',        changeType: 'up',   href: '/admin/teachers' },
     { icon: '💰', label: 'Fees Collected',    value: formatCurrency(stats?.fees?.totalCollected || 0), color: 'green', change: `↑ ${stats?.fees?.collectionRate || 0}% rate`, changeType: 'up', href: '/admin/fees' },
     { icon: '🏫', label: 'Active Classes',    value: stats?.overview?.classes || 0,  color: 'red',   change: 'Across all classes', changeType: 'neutral', href: '/admin/classes' },
+    { icon: '📝', label: 'Marks View',       value: stats?.overview?.students || 0, color: 'gold',  change: 'Exam-wise analysis', changeType: 'neutral', href: '/admin/marks' },
   ];
 
   const colorMap: Record<string, any> = {
@@ -68,7 +72,10 @@ export default function AdminDashboard() {
       <AppShell title="Dashboard" subtitle="School overview & statistics">
 
       {/* ── STAT CARDS ── */}
-      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div
+        className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2"
+        style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))' }}
+      >
         {statCards.map(c => {
           const col = colorMap[c.color];
           return (

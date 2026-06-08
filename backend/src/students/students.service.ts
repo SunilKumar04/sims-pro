@@ -60,8 +60,17 @@ export class StudentsService {
       });
 
       if (createdUser.student?.id) {
+        const feeStructure = await tx.schoolSetting.findFirst({
+          where: { schoolId, key: 'feeStructure' },
+          select: { value: true },
+        });
         await tx.fee.create({
-          data: buildInitialFeeData(createdUser.student.id, createdUser.student.className, schoolId),
+          data: buildInitialFeeData(
+            createdUser.student.id,
+            createdUser.student.className,
+            schoolId,
+            feeStructure?.value,
+          ),
         });
       }
 

@@ -23,16 +23,20 @@ export default function AdminFees() {
   const [loading, setLoading] = useState(true);
   const [filter,  setFilter]  = useState('');
   const [receipt, setReceipt] = useState<any>(null);
+  const [editing, setEditing] = useState<any>(null);
+  const [editPaid, setEditPaid] = useState('');
+  const [editRemarks, setEditRemarks] = useState('');
+  const [repairing, setRepairing] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await feesApi.getAll({ status: filter || undefined });
+      const res = await feesApi.getAll();
       setFees(res.data.data || []);
       setSummary(res.data.summary || {});
     } catch { setFees([]); }
     finally { setLoading(false); }
-  }, [filter]);
+  }, []);
 
   useEffect(() => { load(); }, [load]);
 
@@ -42,12 +46,62 @@ export default function AdminFees() {
     catch (e: any) { toast.error('Error', e?.message || 'Error'); }
   };
 
+  const openEditPayment = (fee: any) => {
+    setEditing(fee);
+    setEditPaid(String(fee.paid ?? 0));
+    setEditRemarks(String(fee.remarks ?? ''));
+  };
+
+  const handleSavePaymentEdit = async () => {
+    if (!editing) return;
+
+    const paid = Number(editPaid);
+    if (Number.isNaN(paid) || paid < 0) {
+      toast.error('Validation Error', 'Please enter a valid paid amount');
+      return;
+    }
+
+    try {
+      await feesApi.updatePayment(editing.id, { paid, remarks: editRemarks });
+      toast.success('Payment Updated', `${editing.studentName}'s fee was updated`);
+      setEditing(null);
+      setEditPaid('');
+      setEditRemarks('');
+      load();
+    } catch (e: any) {
+      toast.error('Update Failed', e?.message || 'Error updating payment');
+    }
+  };
+
+  const handleRepairFees = async () => {
+    if (!(await confirm({
+      title: 'Repair Fee Records',
+      message: 'Recalculate existing fee amounts from the current school fee structure? This updates existing records in place and keeps payment history.',
+      confirm: 'Repair Now',
+      cancel: 'Cancel',
+      danger: true,
+    }))) return;
+
+    setRepairing(true);
+    try {
+      const res = await feesApi.repair();
+      toast.success('Fee Records Repaired', res.data?.message || 'Existing fees updated successfully');
+      await load();
+    } catch (e: any) {
+      toast.error('Repair Failed', e?.message || 'Unable to repair fee records');
+    } finally {
+      setRepairing(false);
+    }
+  };
+
   const statCards = [
     { label: 'Total Students', value: summary.total || 0,      icon: '📋', color: '#93C5FD' },
     { label: 'Fees Paid',      value: summary.paid || 0,       icon: '✅', color: '#86EFAC' },
     { label: 'Pending',        value: summary.pending || 0,    icon: '⏳', color: '#FCA5A5' },
     { label: 'Collected',      value: formatCurrency(summary.totalCollected || 0), icon: '💰', color: '#F0C040' },
   ];
+
+  const visibleFees = filter ? fees.filter((f) => f.status === filter) : fees;
 
   return (
     <AppShell title="Fee Management" subtitle="Track and manage fee payments">
@@ -79,6 +133,17 @@ export default function AdminFees() {
         </div>
       </div>
 
+      <div className="mb-5 flex justify-end">
+        <button
+          onClick={handleRepairFees}
+          disabled={repairing}
+          className="px-4 py-2 rounded-xl text-xs font-black transition-all disabled:opacity-60 hover:-translate-y-0.5"
+          style={{ background: 'linear-gradient(135deg,#D4A017,#F0C040)', color: '#0A1628' }}
+        >
+          {repairing ? '⏳ Repairing...' : '🛠 Repair Fee Records'}
+        </button>
+      </div>
+
       {/* TABLE */}
       <div className="glass rounded-2xl overflow-hidden">
         <div className="sims-table-wrap">
@@ -94,7 +159,7 @@ export default function AdminFees() {
                 ? [...Array(6)].map((_, i) => (
                     <tr key={i}>{[...Array(8)].map((_, j) => <td key={j}><div className="skeleton h-5 rounded" /></td>)}</tr>
                   ))
-                : fees.map(f => (
+                : visibleFees.map(f => (
                     <tr key={f.id}>
                       <td>
                         <div className="font-bold text-white">{f.studentName}</div>
@@ -115,6 +180,11 @@ export default function AdminFees() {
                               Mark Paid
                             </button>
                           )}
+                          <button onClick={() => openEditPayment(f)}
+                                  className="px-3 py-1.5 rounded-lg text-xs font-bold transition-all"
+                                  style={{ background: 'rgba(245,158,11,0.15)', border: '1px solid rgba(245,158,11,0.3)', color: '#FCD34D' }}>
+                            {f.status === 'PAID' ? 'Edit Paid' : 'Edit Payment'}
+                          </button>
                           <button onClick={() => setReceipt(f)}
                                   className="px-3 py-1.5 rounded-lg text-xs font-bold glass hover:bg-white/10">
                             🧾
@@ -171,6 +241,80 @@ export default function AdminFees() {
                       style={{ background: 'linear-gradient(135deg,#D4A017,#F0C040)', color: '#0A1628' }}>
                 🖨️ Print
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* PAYMENT EDIT MODAL */}
+      {editing && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
+             style={{ background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(8px)' }}>
+          <div className="w-full max-w-md rounded-3xl p-5 shadow-2xl sm:p-8"
+               style={{ background: '#0F2044', border: '1px solid rgba(255,255,255,0.1)' }}>
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-xl font-extrabold">✏️ Edit Payment</h2>
+              <button onClick={() => setEditing(null)} className="w-8 h-8 rounded-xl glass flex items-center justify-center text-white/50 hover:text-white">✕</button>
+            </div>
+
+            <div className="mb-5 rounded-2xl p-4" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
+              <div className="text-sm font-bold text-white">{editing.studentName}</div>
+              <div className="text-xs mt-1 text-white/40">{editing.className} · Roll {editing.roll}</div>
+              <div className="mt-3 grid grid-cols-2 gap-3 text-xs">
+                <div className="rounded-xl p-3" style={{ background: 'rgba(255,255,255,0.03)' }}>
+                  <div className="text-white/35">Total Amount</div>
+                  <div className="mt-1 font-bold text-white">{formatCurrency(editing.amount)}</div>
+                </div>
+                <div className="rounded-xl p-3" style={{ background: 'rgba(255,255,255,0.03)' }}>
+                  <div className="text-white/35">Current Paid</div>
+                  <div className="mt-1 font-bold text-green-400">{formatCurrency(editing.paid)}</div>
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold mb-1.5 uppercase tracking-wider" style={{ color: 'rgba(255,255,255,0.4)' }}>
+                  Paid Amount
+                </label>
+                <input
+                  type="number"
+                  min={0}
+                  max={editing.amount}
+                  value={editPaid}
+                  onChange={(e) => setEditPaid(e.target.value)}
+                  className="sims-input"
+                  placeholder="Enter total paid amount"
+                />
+                <p className="mt-1 text-[11px]" style={{ color: 'rgba(255,255,255,0.35)' }}>
+                  Save the cumulative amount paid so far, not just the latest installment.
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold mb-1.5 uppercase tracking-wider" style={{ color: 'rgba(255,255,255,0.4)' }}>
+                  Remarks
+                </label>
+                <textarea
+                  value={editRemarks}
+                  onChange={(e) => setEditRemarks(e.target.value)}
+                  className="sims-input min-h-[96px]"
+                  placeholder="Optional note about this payment"
+                />
+              </div>
+
+              <div className="flex flex-col gap-3 sm:flex-row">
+                <button onClick={() => setEditing(null)} className="flex-1 py-3 rounded-xl text-sm font-bold glass hover:bg-white/10">
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSavePaymentEdit}
+                  className="flex-1 py-3 rounded-xl text-sm font-black"
+                  style={{ background: 'linear-gradient(135deg,#D4A017,#F0C040)', color: '#0A1628' }}
+                >
+                  Save Payment
+                </button>
+              </div>
             </div>
           </div>
         </div>

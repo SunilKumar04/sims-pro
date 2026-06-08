@@ -5,7 +5,7 @@ export interface User {
   id: string;
   name: string;
   email: string;
-  role: 'ADMIN' | 'SCHOOL_ADMIN' | 'TEACHER' | 'STUDENT' | 'PARENT' | 'ACCOUNTANT' | 'SUPER_ADMIN';
+  role: 'ADMIN' | 'TEACHER' | 'STUDENT' | 'PARENT' | 'ACCOUNTANT' | 'SUPER_ADMIN';
   scope?: 'school' | 'superadmin';
   schoolId?: string;
 
@@ -19,6 +19,11 @@ export interface User {
   employeeCode?: string;
   subject?: string;
 }
+
+export const normalizeRole = (role?: string): string => {
+  const upper = String(role || '').toUpperCase();
+  return upper === 'SCHOOL_ADMIN' ? 'ADMIN' : upper;
+};
 
 export interface SchoolBranding {
   shortName: string;
@@ -76,9 +81,8 @@ const getStoredPortalSlug = (): string | undefined => {
 };
 
 export const getPortalRoleParam = (role?: string): 'admin' | 'teacher' | 'student' | undefined => {
-  switch (String(role || '').toUpperCase()) {
+  switch (normalizeRole(role)) {
     case 'ADMIN':
-    case 'SCHOOL_ADMIN':
       return 'admin';
     case 'TEACHER':
       return 'teacher';
@@ -132,20 +136,24 @@ export const login = async (
   const res = await authApi.login(email, password, getLoginPortalSlug());
 
   const { accessToken, user, school, settings, branding } = res.data;
+  const normalizedUser = {
+    ...user,
+    role: normalizeRole(user?.role),
+  } as User;
 
   // ✅ store in localStorage
   localStorage.setItem('sims_token', accessToken);
-  localStorage.setItem('sims_user', JSON.stringify(user));
+  localStorage.setItem('sims_user', JSON.stringify(normalizedUser));
   if (school) {
     localStorage.setItem('sims_school', JSON.stringify({ ...school, settings, branding }));
   }
 
-  return { user, token: accessToken };
+  return { user: normalizedUser, token: accessToken };
 };
 
 export const logout = () => {
   const user = getUser();
-  const nextPath = getSchoolLoginPath(user?.role);
+  const nextPath = getSchoolLoginPath(normalizeRole(user?.role));
   localStorage.removeItem('sims_token');
   localStorage.removeItem('sims_user');
   localStorage.removeItem('sims_school');
@@ -188,10 +196,9 @@ export const isAuthenticated = (): boolean => {
 };
 
 export const getRoleRedirect = (role: string): string => {
-  switch (role) {
+  switch (normalizeRole(role)) {
     case 'SUPER_ADMIN':
       return '/superadmin/dashboard';
-    case 'SCHOOL_ADMIN':
     case 'ADMIN':
       return '/admin/dashboard';
     case 'TEACHER':

@@ -17,6 +17,14 @@ export class FeesService {
     return schoolId;
   }
 
+  private async getFeeStructureForSchool(schoolId: string) {
+    const setting = await this.prisma.schoolSetting.findFirst({
+      where: { schoolId, key: 'feeStructure' },
+      select: { value: true },
+    });
+    return setting?.value;
+  }
+
   private async resolveStudentId(id: string): Promise<string | null> {
     const schoolId = this.getSchoolId();
     const byId = await this.prisma.student.findFirst({ where: { id, schoolId } });
@@ -27,6 +35,7 @@ export class FeesService {
 
   private async ensureMissingFeeRecords() {
     const schoolId = this.getSchoolId();
+    const feeStructure = await this.getFeeStructureForSchool(schoolId);
     const studentsWithoutFees = await this.prisma.student.findMany({
       where: { schoolId, fees: { none: {} } },
       select: { id: true, className: true },
@@ -35,12 +44,15 @@ export class FeesService {
     if (studentsWithoutFees.length === 0) return;
 
     await this.prisma.fee.createMany({
-      data: studentsWithoutFees.map((student) => buildInitialFeeData(student.id, student.className, schoolId)),
+      data: studentsWithoutFees.map((student) =>
+        buildInitialFeeData(student.id, student.className, schoolId, feeStructure),
+      ),
     });
   }
 
   private async ensureStudentFeeRecord(studentId: string) {
     const schoolId = this.getSchoolId();
+    const feeStructure = await this.getFeeStructureForSchool(schoolId);
     const existingFee = await this.prisma.fee.findFirst({
       where: { studentId, schoolId },
       select: { id: true },
@@ -54,7 +66,7 @@ export class FeesService {
     if (!student) return;
 
     await this.prisma.fee.create({
-      data: buildInitialFeeData(student.id, student.className, schoolId),
+      data: buildInitialFeeData(student.id, student.className, schoolId, feeStructure),
     });
   }
 
@@ -157,6 +169,69 @@ export class FeesService {
   async create(dto: any) {
     const fee = await this.prisma.fee.create({ data: { ...dto, schoolId: this.getSchoolId() } });
     return { success: true, message: 'Fee record created', data: fee };
+  }
+
+  async repairFeeRecords(query: { className?: string } = {}) {
+    const schoolId = this.getSchoolId();
+    const feeStructure = await this.getFeeStructureForSchool(schoolId);
+
+    const where: any = { schoolId };
+    if (query.className) where.className = query.className;
+
+    const fees = await this.prisma.fee.findMany({
+      where,
+      include: {
+        student: {
+          select: {
+            id: true,
+            className: true,
+          },
+        },
+      },
+      orderBy: { createdAt: 'asc' },
+    });
+
+    let updatedCount = 0;
+
+    await this.prisma.$transaction(async (tx) => {
+      for (const fee of fees) {
+        const structure = buildInitialFeeData(
+          fee.studentId,
+          fee.student.className,
+          schoolId,
+          feeStructure,
+        );
+
+        const nextAmount = structure.amount;
+        const nextStatus: FeeStatus =
+          fee.paid >= nextAmount ? FeeStatus.PAID :
+          fee.paid > 0           ? FeeStatus.PARTIAL :
+                                   FeeStatus.PENDING;
+
+        await tx.fee.update({
+          where: { id: fee.id },
+          data: {
+            tuition: structure.tuition,
+            transport: structure.transport,
+            lab: structure.lab,
+            sports: structure.sports,
+            amount: nextAmount,
+            status: nextStatus,
+            paidDate: nextStatus === FeeStatus.PAID ? fee.paidDate ?? fee.updatedAt : fee.paidDate,
+          },
+        });
+        updatedCount += 1;
+      }
+    });
+
+    return {
+      success: true,
+      message: `Updated ${updatedCount} fee record${updatedCount === 1 ? '' : 's'}`,
+      data: {
+        updatedCount,
+        className: query.className || null,
+      },
+    };
   }
 
   async getMonthlyStats() {

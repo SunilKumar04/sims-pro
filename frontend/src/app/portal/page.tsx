@@ -106,7 +106,7 @@ export default function PortalPage() {
 
   return (
     <div
-      className="min-h-screen flex flex-col"
+      className="min-h-screen flex flex-col overflow-x-hidden"
       style={{ background: `linear-gradient(160deg, ${branding.backgroundColor} 0%, #0F2044 50%, ${branding.backgroundColor} 100%)` }}
     >
 
@@ -120,12 +120,12 @@ export default function PortalPage() {
       {/* ── TICKER ── */}
       <div className="relative z-10 overflow-hidden" style={{ background: tickerBackground, padding: '9px 0' }}>
         <div className="absolute left-0 top-0 bottom-0 flex items-center px-4 z-10"
-             style={{ background: branding.backgroundColor, color: branding.accentColor, fontSize: 11, fontWeight: 800, letterSpacing: 1, textTransform: 'uppercase', borderRight: `2px solid ${branding.primaryColor}`, whiteSpace: 'nowrap' }}>
+             style={{ background: branding.backgroundColor, color: branding.accentColor, fontSize: 10, fontWeight: 800, letterSpacing: 1, textTransform: 'uppercase', borderRight: `2px solid ${branding.primaryColor}`, whiteSpace: 'nowrap' }}>
           📢 Latest
         </div>
-        <div className="ticker-run flex items-center whitespace-nowrap pl-28">
+        <div className="ticker-run flex items-center whitespace-nowrap pl-24 sm:pl-28">
           {[...TICKER_ITEMS, ...TICKER_ITEMS].map((item, i) => (
-            <span key={i} className="inline-flex items-center gap-2 px-10 text-xs font-semibold text-navy-800" style={{ color: branding.backgroundColor }}>
+            <span key={i} className="inline-flex items-center gap-2 px-6 sm:px-10 text-[11px] sm:text-xs font-semibold text-navy-800" style={{ color: branding.backgroundColor }}>
               <span className="w-1.5 h-1.5 rounded-full bg-navy-800 flex-shrink-0" style={{ backgroundColor: branding.backgroundColor }} />
               {item}
             </span>
@@ -134,12 +134,12 @@ export default function PortalPage() {
       </div>
 
       {/* ── HEADER ── */}
-      <header className="relative z-10 flex flex-wrap items-center justify-between gap-4 border-b px-5 py-5 md:px-10" style={{ minHeight: 80, borderColor: 'rgba(255,255,255,0.08)', backdropFilter: 'blur(20px)' }}>
-        <div className="flex items-center gap-4">
+      <header className="relative z-10 flex flex-col gap-4 border-b px-4 py-4 sm:px-5 md:flex-row md:items-center md:justify-between md:px-10" style={{ minHeight: 80, borderColor: 'rgba(255,255,255,0.08)', backdropFilter: 'blur(20px)' }}>
+        <div className="flex min-w-0 items-center gap-3 sm:gap-4 md:w-auto">
           <button
             type="button"
             onClick={() => router.push(portalHome)}
-            className="w-14 h-14 rounded-2xl flex items-center justify-center text-3xl flex-shrink-0 overflow-hidden"
+            className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl flex items-center justify-center text-2xl sm:text-3xl flex-shrink-0 overflow-hidden"
             style={{ border: 'none', padding: 0, cursor: 'pointer', background: `linear-gradient(135deg, ${branding.primaryColor}, ${branding.accentColor})`, boxShadow: `0 4px 20px ${branding.primaryColor}55` }}
           >
             {branding.logoUrl ? <img src={branding.logoUrl} alt={schoolName} className="w-full h-full object-cover" /> : '🎓'}
@@ -147,15 +147,15 @@ export default function PortalPage() {
           <button
             type="button"
             onClick={() => router.push(portalHome)}
-            className="text-left"
+            className="text-left min-w-0"
             style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}
           >
-            <div className="text-lg font-black tracking-tight leading-tight">{schoolName} <span style={{ color: branding.accentColor }}>{branding.shortName}</span></div>
-            <div className="text-[10px] font-medium tracking-wide" style={{ color: 'rgba(255,255,255,0.4)' }}>School Information Management System</div>
+            <div className="text-base sm:text-lg font-black tracking-tight leading-tight whitespace-nowrap">SIMS <span style={{ color: branding.accentColor }}>Pro</span></div>
+            <div className="text-[10px] font-medium tracking-wide whitespace-nowrap" style={{ color: 'rgba(255,255,255,0.4)' }}>School Information Management System</div>
           </button>
         </div>
 
-        <div className="text-center">
+        <div className="hidden lg:block text-center flex-shrink-0">
           <div className="font-lora text-base font-semibold" style={{ color: '#F0F4FF' }}>{schoolName}</div>
           <div className="text-[11px] mt-0.5" style={{ color: 'rgba(255,255,255,0.4)' }}>
             {process.env.NEXT_PUBLIC_SCHOOL_ESTD ? `Estd. ${process.env.NEXT_PUBLIC_SCHOOL_ESTD} · ` : ''}
@@ -163,12 +163,12 @@ export default function PortalPage() {
           </div>
         </div>
 
-        <div className="flex items-center gap-4">
-          <div className="text-right rounded-xl px-4 py-2 glass">
+        <div className="flex w-full flex-col gap-3 sm:flex-row sm:items-center sm:justify-end md:w-auto">
+          <div className="text-right rounded-xl px-4 py-2 glass w-full sm:w-auto">
             <div className="text-lg font-bold tabular-nums text-yellow-400">{time}</div>
             <div className="text-[11px] mt-0.5" style={{ color: 'rgba(255,255,255,0.4)' }}>{date}</div>
           </div>
-          <button className="px-4 py-2 rounded-lg text-sm font-semibold transition-all"
+          <button className="w-full px-4 py-2 rounded-lg text-sm font-semibold transition-all sm:w-auto"
                   style={{ background: `${branding.primaryColor}22`, border: `1px solid ${branding.primaryColor}44`, color: branding.accentColor }}>
             📞 Help Desk
           </button>
@@ -176,32 +176,28 @@ export default function PortalPage() {
       </header>
 
       {/* ── HERO ── */}
-      <div className="relative z-10 text-center pt-14 pb-10 px-10">
+      <div className="relative z-10 text-center pt-10 pb-8 px-4 sm:pt-14 sm:pb-10 sm:px-6 lg:px-10">
         <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider mb-6"
              style={{ background: `${branding.accentColor}22`, border: `1px solid ${branding.accentColor}44`, color: branding.accentColor }}>
           <span className="w-2 h-2 rounded-full animate-pulse" style={{ backgroundColor: branding.accentColor }} />
           Academic Year {process.env.NEXT_PUBLIC_ACADEMIC_YEAR || 'Current Session'}
         </div>
-        <h1 className="text-4xl lg:text-5xl font-black tracking-tight mb-4 leading-tight">
+        <h1 className="text-2xl sm:text-3xl lg:text-5xl font-black tracking-tight mb-4 leading-tight">
           One Portal, Every Service<br/>
           <span className="bg-clip-text text-transparent" style={{ backgroundImage: headerGlow }}>
             All Under One Roof
           </span>
         </h1>
-        <p className="text-base max-w-xl mx-auto leading-relaxed" style={{ color: 'rgba(255,255,255,0.55)' }}>
+        <p className="text-sm sm:text-base max-w-xl mx-auto leading-relaxed" style={{ color: 'rgba(255,255,255,0.55)' }}>
           Access student records, fee receipts, attendance, homework, notices and more — securely and instantly through your personalised dashboard.
         </p>
       </div>
 
       {/* ── STATS ── */}
-      <div className="relative z-10 flex max-w-4xl mx-auto w-full px-10 mb-12">
+      <div className="relative z-10 grid grid-cols-1 gap-3 max-w-4xl mx-auto w-full px-4 sm:grid-cols-2 xl:grid-cols-4 sm:px-6 lg:px-10 mb-12">
         {STATS.map((s, i) => (
-          <div key={i} className="flex-1 text-center py-5 glass transition-all hover:bg-white/[0.07]"
-               style={{
-                 borderRadius: i === 0 ? '12px 0 0 12px' : i === STATS.length - 1 ? '0 12px 12px 0' : '0',
-                 borderRight: i < STATS.length - 1 ? 'none' : undefined,
-               }}>
-            <div className={`text-3xl font-black tracking-tight ${s.color}`}>{s.value}</div>
+          <div key={i} className="text-center py-5 px-4 glass transition-all hover:bg-white/[0.07] rounded-2xl">
+            <div className={`text-2xl sm:text-3xl font-black tracking-tight ${s.color}`}>{s.value}</div>
             <div className="text-xs mt-1 font-medium" style={{ color: 'rgba(255,255,255,0.4)' }}>{s.label}</div>
           </div>
         ))}
@@ -250,18 +246,18 @@ export default function PortalPage() {
       </div>
 
       {/* ── FOOTER ── */}
-      <footer className="relative z-10 mt-auto flex flex-col items-start justify-between gap-3 border-t px-5 py-7 md:flex-row md:items-center md:px-10"
+      <footer className="relative z-10 mt-auto grid grid-cols-1 gap-4 border-t px-4 py-6 sm:px-5 md:grid-cols-[1.2fr_1fr_auto] md:items-center md:px-10"
               style={{ borderColor: 'rgba(255,255,255,0.08)', background: 'rgba(0,0,0,0.2)' }}>
-        <div className="text-sm" style={{ color: 'rgba(255,255,255,0.5)' }}>
+        <div className="text-sm text-center md:text-left" style={{ color: 'rgba(255,255,255,0.5)' }}>
           <strong className="text-white">{schoolName}</strong><br/>
           {schoolCity} · Phone: {contactPhone}
         </div>
-        <div className="flex gap-5">
+        <div className="flex flex-wrap justify-center gap-x-5 gap-y-2 text-center">
           {['About School', 'Contact Us', 'Privacy Policy', 'Terms of Use'].map(l => (
             <a key={l} href="#" className="text-sm transition-colors hover:text-yellow-400" style={{ color: 'rgba(255,255,255,0.4)' }}>{l}</a>
           ))}
         </div>
-        <div className="glass rounded-xl px-4 py-2 text-sm" style={{ color: 'rgba(255,255,255,0.5)' }}>
+        <div className="glass rounded-xl px-4 py-2 text-sm text-center md:text-right justify-self-center md:justify-self-end" style={{ color: 'rgba(255,255,255,0.5)' }}>
           📧 <span className="text-yellow-400 font-bold">{contactEmail}</span>
         </div>
       </footer>
