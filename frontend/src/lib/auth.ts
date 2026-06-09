@@ -80,6 +80,26 @@ const getStoredPortalSlug = (): string | undefined => {
   return getLoginPortalSlug();
 };
 
+const decodeJwtPayload = (token: string): Record<string, any> | null => {
+  const parts = token.split('.');
+  if (parts.length !== 3) return null;
+
+  try {
+    const payload = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+    const padLength = (4 - (payload.length % 4)) % 4;
+    const padded = payload + '='.repeat(padLength);
+    const nodeBuffer = (globalThis as any).Buffer;
+    const json = typeof atob === 'function'
+      ? atob(padded)
+      : nodeBuffer
+        ? nodeBuffer.from(padded, 'base64').toString('utf8')
+        : '';
+    return JSON.parse(json);
+  } catch {
+    return null;
+  }
+};
+
 export const getPortalRoleParam = (role?: string): 'admin' | 'teacher' | 'student' | undefined => {
   switch (normalizeRole(role)) {
     case 'ADMIN':
@@ -164,13 +184,32 @@ export const getUser = (): User | null => {
   if (typeof window === 'undefined') return null;
 
   const raw = localStorage.getItem('sims_user');
-  if (!raw) return null;
+  const token = localStorage.getItem('sims_token');
+  const tokenPayload = token ? decodeJwtPayload(token) : null;
+  if (!raw && !tokenPayload) return null;
 
   try {
-    return JSON.parse(raw);
+    const storedUser = raw ? JSON.parse(raw) : {};
+    const merged = { ...(tokenPayload ?? {}), ...storedUser };
+    if (merged.role) {
+      merged.role = normalizeRole(merged.role);
+    }
+    if (!merged.teacherId && merged.teacher?.id) {
+      merged.teacherId = merged.teacher.id;
+    }
+    if (!merged.studentId && merged.student?.id) {
+      merged.studentId = merged.student.id;
+    }
+    return merged as User;
   } catch {
-    return null;
+    return tokenPayload ? ({ ...tokenPayload, role: normalizeRole(tokenPayload.role) } as User) : null;
   }
+};
+
+export const getTeacherId = (user?: User | null): string => {
+  const current = user ?? getUser();
+  if (!current) return '';
+  return current.teacherId ?? (current as any).teacher?.id ?? '';
 };
 
 export const getToken = (): string | null => {

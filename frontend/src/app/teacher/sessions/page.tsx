@@ -3,7 +3,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import AppShell from '@/components/layout/AppShell';
 import { sessionsApi, timetableApi } from '@/lib/api';
-import { getUser } from '@/lib/auth';
+import { getTeacherId, getUser } from '@/lib/auth';
 import { toast } from '@/components/ui/Toast';
 import { confirm } from '@/components/ui/Confirm';
 
@@ -25,7 +25,7 @@ const sc = (s: string) => SUB_COL[s] ?? '#aaaaaa';
 
 export default function TeacherSessions() {
   const user = getUser();
-  const tid  = user?.teacherId ?? user?.id ?? '';
+  const tid  = getTeacherId(user);
 
   const [view,     setView]     = useState<View>('today');
   const [today,    setToday]    = useState<any[]>([]);
@@ -58,7 +58,7 @@ export default function TeacherSessions() {
 
       const allMaps = m.data.data ?? [];
       const mine = allMaps.filter((x: any) =>
-        x.teacherId === tid || x.teacher?.user?.name === user?.name
+        x.teacherId === tid || (x.teacher as any)?.userId === user?.id || x.teacher?.user?.name === user?.name
       );
       setMappings(mine);
     } catch { toast.error('Load Failed', 'Could not load sessions'); }

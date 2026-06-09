@@ -17,12 +17,24 @@ export class SessionsService {
 
   private async resolveTeacherId(id: string) {
     const schoolId = this.getSchoolId();
-    const direct = await this.prisma.teacher.findFirst({ where: { id, schoolId } });
-    if (direct) return direct.id;
-    const byUser = await this.prisma.teacher.findFirst({ where: { userId: id, schoolId } });
-    if (byUser) return byUser.id;
+    const candidateIds = [id, this.tenant.get().userId].filter((value): value is string => !!value);
+
+    for (const candidate of candidateIds) {
+      const direct = await this.prisma.teacher.findFirst({ where: { id: candidate, schoolId } });
+      if (direct) return direct.id;
+      const directAny = await this.prisma.teacher.findFirst({ where: { id: candidate } });
+      if (directAny) return directAny.id;
+      const byUser = await this.prisma.teacher.findFirst({ where: { userId: candidate, schoolId } });
+      if (byUser) return byUser.id;
+      const byUserAny = await this.prisma.teacher.findFirst({ where: { userId: candidate } });
+      if (byUserAny) return byUserAny.id;
+    }
+
     const first = await this.prisma.teacher.findFirst({ where: { schoolId } });
-    return first?.id ?? id;
+    if (first) return first.id;
+    const anyTeacher = await this.prisma.teacher.findFirst({});
+    if (anyTeacher) return anyTeacher.id;
+    throw new NotFoundException('Teacher record not found');
   }
 
   private async resolveStudentId(id: string) {
@@ -36,11 +48,31 @@ export class SessionsService {
   async create(dto: any, rawTeacherId: string) {
     const schoolId = this.getSchoolId();
     const teacherId = await this.resolveTeacherId(rawTeacherId);
-    const data = await this.prisma.attendanceSession.upsert({
-      where: { schoolId_className_subject_date_period: { schoolId, className: dto.className, subject: dto.subject, date: new Date(dto.date), period: dto.period } },
-      update: { schoolId, topic: dto.topic },
-      create: { schoolId, className: dto.className, subject: dto.subject, teacherId, date: new Date(dto.date), period: dto.period, topic: dto.topic },
+    const date = new Date(dto.date);
+    const existing = await this.prisma.attendanceSession.findFirst({
+      where: {
+        className: dto.className,
+        subject: dto.subject,
+        date,
+        period: Number(dto.period),
+        OR: schoolId ? [{ schoolId }, { schoolId: null }] : undefined,
+      } as any,
+      orderBy: { createdAt: 'desc' },
     });
+
+    const payload = {
+      schoolId,
+      className: dto.className,
+      subject: dto.subject,
+      teacherId,
+      date,
+      period: Number(dto.period),
+      topic: dto.topic ?? '',
+    };
+
+    const data = existing
+      ? await this.prisma.attendanceSession.update({ where: { id: existing.id }, data: payload })
+      : await this.prisma.attendanceSession.create({ data: payload });
     return { success: true, data };
   }
 
@@ -93,14 +125,15 @@ export class SessionsService {
 
   async getSessionStudents(sessionId: string) {
     const schoolId = this.getSchoolId();
+    const schoolClause = schoolId ? [{ schoolId }, { schoolId: null }] : undefined;
     const session = await this.prisma.attendanceSession.findFirst({
-      where: { id: sessionId, schoolId },
+      where: schoolClause ? { id: sessionId, OR: schoolClause } : { id: sessionId },
       include: { records: { include: { student: { select: { id: true, roll: true, user: { select: { name: true } } } } } } },
     });
     if (!session) throw new NotFoundException('Session not found');
 
     const allStudents = await this.prisma.student.findMany({
-      where: { schoolId, className: session.className },
+      where: schoolClause ? { className: session.className, OR: schoolClause } : { className: session.className },
       include: { user: { select: { name: true } } },
       orderBy: { roll: 'asc' },
     });
@@ -119,13 +152,32 @@ export class SessionsService {
 
   async markBulk(sessionId: string, records: { studentId: string; status: string; remark?: string }[]) {
     const schoolId = this.getSchoolId();
-    await Promise.all(records.map(r =>
-      this.prisma.subjectAttendance.upsert({
-        where: { schoolId_sessionId_studentId: { schoolId, sessionId, studentId: r.studentId } },
-        update: { schoolId, status: r.status as any, remark: r.remark ?? '' },
-        create: { schoolId, sessionId, studentId: r.studentId, status: r.status as any, remark: r.remark ?? '' },
-      })
-    ));
+    await Promise.all(records.map(async (r) => {
+      const existing = await this.prisma.subjectAttendance.findFirst({
+        where: schoolId
+          ? {
+              sessionId,
+              studentId: r.studentId,
+              OR: [{ schoolId }, { schoolId: null }],
+            }
+          : { sessionId, studentId: r.studentId },
+        orderBy: { createdAt: 'desc' },
+      });
+
+      const payload = {
+        schoolId,
+        sessionId,
+        studentId: r.studentId,
+        status: r.status as any,
+        remark: r.remark ?? '',
+      };
+
+      if (existing) {
+        await this.prisma.subjectAttendance.update({ where: { id: existing.id }, data: payload });
+      } else {
+        await this.prisma.subjectAttendance.create({ data: payload });
+      }
+    }));
     return { success: true, message: `${records.length} records saved` };
   }
 
@@ -154,13 +206,14 @@ export class SessionsService {
   async getStudentSummary(rawStudentId: string, className?: string) {
     const schoolId = this.getSchoolId();
     const studentId = await this.resolveStudentId(rawStudentId);
-    const student = await this.prisma.student.findFirst({ where: { id: studentId, schoolId } });
+    const schoolClause = schoolId ? [{ schoolId }, { schoolId: null }] : undefined;
+    const student = await this.prisma.student.findFirst({ where: schoolClause ? { id: studentId, OR: schoolClause } : { id: studentId } });
     if (!student) throw new NotFoundException('Student not found');
 
     const records = await this.prisma.subjectAttendance.findMany({
       where: {
         studentId,
-        schoolId,
+        ...(schoolClause ? { OR: schoolClause } : {}),
         ...(className && { session: { className } }),
       },
       include: { session: { select: { subject: true, date: true, period: true, className: true } } },
@@ -207,7 +260,8 @@ export class SessionsService {
   async getStudentToday(rawStudentId: string, className?: string) {
     const schoolId = this.getSchoolId();
     const studentId = await this.resolveStudentId(rawStudentId);
-    const student   = await this.prisma.student.findFirst({ where: { id: studentId, schoolId } });
+    const schoolClause = schoolId ? [{ schoolId }, { schoolId: null }] : undefined;
+    const student   = await this.prisma.student.findFirst({ where: schoolClause ? { id: studentId, OR: schoolClause } : { id: studentId } });
     const cls       = className ?? student?.className ?? '';
 
     const now      = new Date();
@@ -216,7 +270,7 @@ export class SessionsService {
     const todayStr = now.toISOString().slice(0, 10);
 
     const slots = await this.prisma.timetableSlot.findMany({
-      where: { schoolId, className: cls, dayOfWeek: dow },
+      where: schoolClause ? { className: cls, dayOfWeek: dow, OR: schoolClause } : { className: cls, dayOfWeek: dow },
       include: { teacher: { select: { user: { select: { name: true } } } } },
       orderBy: { period: 'asc' },
     });

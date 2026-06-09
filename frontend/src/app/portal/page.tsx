@@ -155,11 +155,39 @@ export default function PortalPage() {
           </button>
         </div>
 
-        <div className="hidden lg:block text-center flex-shrink-0">
-          <div className="font-lora text-base font-semibold" style={{ color: '#F0F4FF' }}>{schoolName}</div>
-          <div className="text-[11px] mt-0.5" style={{ color: 'rgba(255,255,255,0.4)' }}>
-            {process.env.NEXT_PUBLIC_SCHOOL_ESTD ? `Estd. ${process.env.NEXT_PUBLIC_SCHOOL_ESTD} · ` : ''}
-            {process.env.NEXT_PUBLIC_SCHOOL_BOARD || 'Affiliated School'} · Code: {schoolCode}
+        <div className="hidden lg:flex min-w-0 flex-1 justify-center">
+          <div
+            className="flex max-w-[640px] items-center gap-4 rounded-[34px] px-7 py-5 shadow-2xl"
+            style={{
+              background: 'linear-gradient(135deg, rgba(8,18,40,0.98), rgba(11,25,52,0.92))',
+              border: '1px solid rgba(96,165,250,0.18)',
+              boxShadow: '0 24px 70px rgba(30,64,175,0.16), 0 18px 55px rgba(0,0,0,0.24), inset 0 1px 0 rgba(255,255,255,0.03)',
+            }}
+          >
+            <div className="min-w-0">
+              <div className="truncate text-[20px] font-black tracking-tight text-white sm:text-[22px]">{schoolName}</div>
+              <div className="mt-1 truncate text-[12px] font-medium tracking-wide" style={{ color: 'rgba(255,255,255,0.42)' }}>
+                {process.env.NEXT_PUBLIC_SCHOOL_ESTD ? `Estd. ${process.env.NEXT_PUBLIC_SCHOOL_ESTD} · ` : ''}
+                {process.env.NEXT_PUBLIC_SCHOOL_BOARD || 'Affiliated School'} · Code: {schoolCode}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div
+          className="flex w-full items-center gap-4 rounded-[34px] px-5 py-4 text-left lg:hidden"
+          style={{
+            background: 'linear-gradient(135deg, rgba(8,18,40,0.98), rgba(11,25,52,0.92))',
+            border: '1px solid rgba(96,165,250,0.18)',
+            boxShadow: '0 20px 58px rgba(30,64,175,0.14), 0 16px 45px rgba(0,0,0,0.22), inset 0 1px 0 rgba(255,255,255,0.03)',
+          }}
+        >
+          <div className="min-w-0">
+            <div className="truncate text-[18px] font-black tracking-tight text-white sm:text-[20px]">{schoolName}</div>
+            <div className="mt-1 truncate text-[12px] font-medium tracking-wide" style={{ color: 'rgba(255,255,255,0.42)' }}>
+              {process.env.NEXT_PUBLIC_SCHOOL_ESTD ? `Estd. ${process.env.NEXT_PUBLIC_SCHOOL_ESTD} · ` : ''}
+              {process.env.NEXT_PUBLIC_SCHOOL_BOARD || 'Affiliated School'} · Code: {schoolCode}
+            </div>
           </div>
         </div>
 

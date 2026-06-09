@@ -18,15 +18,23 @@ export class HomeworkService {
   // Resolve teacherId — could be Teacher.id or User.id
   private async resolveTeacherId(id: string): Promise<string> {
     const schoolId = this.getSchoolId();
-    // Try direct Teacher.id first
-    const byId = await this.prisma.teacher.findFirst({ where: { id, schoolId } });
-    if (byId) return byId.id;
-    // Try by userId
-    const byUser = await this.prisma.teacher.findFirst({ where: { userId: id, schoolId } });
-    if (byUser) return byUser.id;
-    // Fallback: use first teacher (dev mode only)
+    const candidateIds = [id, this.tenant.get().userId].filter((value): value is string => !!value);
+
+    for (const candidate of candidateIds) {
+      const byId = await this.prisma.teacher.findFirst({ where: { id: candidate, schoolId } });
+      if (byId) return byId.id;
+      const byIdAny = await this.prisma.teacher.findFirst({ where: { id: candidate } });
+      if (byIdAny) return byIdAny.id;
+      const byUser = await this.prisma.teacher.findFirst({ where: { userId: candidate, schoolId } });
+      if (byUser) return byUser.id;
+      const byUserAny = await this.prisma.teacher.findFirst({ where: { userId: candidate } });
+      if (byUserAny) return byUserAny.id;
+    }
+
     const first = await this.prisma.teacher.findFirst({ where: { schoolId } });
     if (first) return first.id;
+    const anyTeacher = await this.prisma.teacher.findFirst({});
+    if (anyTeacher) return anyTeacher.id;
     throw new NotFoundException('Teacher record not found');
   }
 
@@ -38,6 +46,7 @@ export class HomeworkService {
         schoolId,
         ...dto,
         teacherId,
+        description: dto.description ?? '',
         dueDate: new Date(dto.dueDate),
       },
       include: { teacher: { include: { user: { select: { name: true } } } } },

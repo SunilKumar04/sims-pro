@@ -86,34 +86,32 @@ export class MarksService {
       const maxMarks = Number(record.maxMarks) || 100;
       const grade = record.grade ?? GRADE(marks, maxMarks);
 
-      const data = await this.prisma.mark.upsert({
+      const existing = await this.prisma.mark.findFirst({
         where: {
-          schoolId_studentId_subject_examType_year: {
-            schoolId: student.schoolId,
-            studentId,
-            subject: record.subject,
-            examType: examType as any,
-            year,
-          },
-        },
-        update: {
-          className: dto.className || student.className,
-          marks,
-          maxMarks,
-          grade,
-        },
-        create: {
-          schoolId: student.schoolId,
           studentId,
           subject: record.subject,
           examType: examType as any,
-          marks,
-          maxMarks,
-          grade,
-          className: dto.className || student.className,
           year,
-        },
+          OR: student.schoolId ? [{ schoolId: student.schoolId }, { schoolId: null }] : undefined,
+        } as any,
+        orderBy: { createdAt: 'desc' },
       });
+
+      const payload = {
+        schoolId: student.schoolId,
+        studentId,
+        subject: record.subject,
+        examType: examType as any,
+        marks,
+        maxMarks,
+        grade,
+        className: dto.className || student.className,
+        year,
+      };
+
+      const data = existing
+        ? await this.prisma.mark.update({ where: { id: existing.id }, data: payload })
+        : await this.prisma.mark.create({ data: payload });
 
       results.push(data);
     }

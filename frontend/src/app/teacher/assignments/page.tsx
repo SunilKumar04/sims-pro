@@ -5,7 +5,7 @@ import AppShell from '@/components/layout/AppShell';
 import { assignmentsApi, timetableApi } from '@/lib/api';
 import { toast } from '@/components/ui/Toast';
 import { confirm } from '@/components/ui/Confirm';
-import { getUser } from '@/lib/auth';
+import { getTeacherId, getUser } from '@/lib/auth';
 import type { Assignment, AssignmentSubmission, ClassSubjectTeacher } from '@/types/sims';
 
 const SUBJECTS = ['Mathematics','Physics','Chemistry','Biology','English','Hindi',
@@ -23,7 +23,7 @@ const BLANK: AForm = { className:'', subject:'', title:'', description:'', dueDa
 
 export default function TeacherAssignments() {
   const user = getUser();
-  const tid  = user?.teacherId ?? user?.id ?? '';
+  const tid  = getTeacherId(user);
 
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [mappings,    setMappings]    = useState<ClassSubjectTeacher[]>([]);
@@ -49,7 +49,7 @@ export default function TeacherAssignments() {
       ]);
       setAssignments(ar.data.data ?? []);
       const all = (mr.data.data ?? []) as ClassSubjectTeacher[];
-      setMappings(all.filter(m => m.teacherId === tid || m.teacher?.user?.name === user?.name));
+      setMappings(all.filter(m => m.teacherId === tid || (m.teacher as any)?.userId === user?.id || m.teacher?.user?.name === user?.name));
     } catch { toast.error('Load Failed',''); }
     finally { setLoading(false); }
   }, [filterCls, tid, user?.name]);

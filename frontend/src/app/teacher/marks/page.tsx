@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import AppShell from '@/components/layout/AppShell';
 import { studentsApi, marksApi, timetableApi, classesApi } from '@/lib/api';
-import { getUser } from '@/lib/auth';
+import { getTeacherId, getUser } from '@/lib/auth';
 import { toast } from '@/components/ui/Toast';
 
 const EXAM_TYPES  = [
@@ -27,6 +27,7 @@ function grade(marks: number, max = 100): { g: string; col: string } {
 
 export default function TeacherMarks() {
   const user = getUser();
+  const tid = getTeacherId(user);
   const [classes,    setClasses]    = useState<string[]>([]);
   const [className,  setClassName]  = useState('');
   const [examType,   setExamType]   = useState('FINAL');
@@ -51,7 +52,7 @@ export default function TeacherMarks() {
       const allMappings = mappingsRes.data.data ?? [];
       const teacherClasses = [...new Set(
         allMappings
-          .filter((item: any) => item.teacherId === user?.teacherId || item.teacher?.user?.name === user?.name)
+          .filter((item: any) => item.teacherId === tid || (item.teacher as any)?.userId === user?.id || item.teacher?.user?.name === user?.name)
           .map((item: any) => item.className)
           .filter(Boolean),
       )];
@@ -69,7 +70,7 @@ export default function TeacherMarks() {
       setClasses([]);
       setClassName('');
     }
-  }, [user?.name, user?.teacherId]);
+  }, [tid, user?.name]);
 
   const load = useCallback(async () => {
     if (!className) {

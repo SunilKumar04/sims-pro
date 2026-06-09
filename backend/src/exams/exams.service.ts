@@ -42,12 +42,24 @@ export class ExamsService {
 
   private async resolveTeacherId(rawTeacherId: string) {
     const schoolId = this.getSchoolId();
-    const direct  = await this.prisma.teacher.findFirst({ where: { id: rawTeacherId, schoolId } });
-    if (direct) return direct.id;
-    const byUser = await this.prisma.teacher.findFirst({ where: { userId: rawTeacherId, schoolId } });
-    if (byUser) return byUser.id;
+    const candidateIds = [rawTeacherId, this.tenant.get().userId].filter((value): value is string => !!value);
+
+    for (const candidate of candidateIds) {
+      const direct = await this.prisma.teacher.findFirst({ where: { id: candidate, schoolId } });
+      if (direct) return direct.id;
+      const directAny = await this.prisma.teacher.findFirst({ where: { id: candidate } });
+      if (directAny) return directAny.id;
+      const byUser = await this.prisma.teacher.findFirst({ where: { userId: candidate, schoolId } });
+      if (byUser) return byUser.id;
+      const byUserAny = await this.prisma.teacher.findFirst({ where: { userId: candidate } });
+      if (byUserAny) return byUserAny.id;
+    }
+
     const first = await this.prisma.teacher.findFirst({ where: { schoolId } });
-    return first?.id ?? rawTeacherId;
+    if (first) return first.id;
+    const anyTeacher = await this.prisma.teacher.findFirst({});
+    if (anyTeacher) return anyTeacher.id;
+    throw new NotFoundException('Teacher record not found');
   }
 
   async create(dto: any) {

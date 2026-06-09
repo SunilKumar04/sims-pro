@@ -3,7 +3,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import AppShell from '@/components/layout/AppShell';
 import { attendanceApi, classesApi } from '@/lib/api';
-import { getUser } from '@/lib/auth';
+import { getTeacherId, getUser } from '@/lib/auth';
 import { toast } from '@/components/ui/Toast';
 
 type Status = 'PRESENT' | 'ABSENT' | 'LATE';
@@ -18,7 +18,7 @@ const pctColor = (p: number) => p >= 75 ? '#86EFAC' : p >= 60 ? '#FCD34D' : '#FC
 
 export default function TeacherAttendance() {
   const user = getUser();
-  const tid  = user?.teacherId ?? user?.id ?? '';
+  const tid  = getTeacherId(user);
 
   const [classes,     setClasses]     = useState<any[]>([]);
   const [selClass,    setSelClass]    = useState('');

@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import AppShell from '@/components/layout/AppShell';
 import { dashboardApi, noticesApi, homeworkApi, timetableApi } from '@/lib/api';
-import { getUser } from '@/lib/auth';
+import { getTeacherId, getUser } from '@/lib/auth';
 import Link from 'next/link';
 
 type TeacherStats = {
@@ -43,6 +43,7 @@ export default function TeacherDashboard() {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
   const user = getUser();
+  const tid = getTeacherId(user);
 
   useEffect(() => {
     if (!user) return;
@@ -57,7 +58,7 @@ export default function TeacherDashboard() {
     Promise.all([
       dashboardApi.getTeacherStats().catch(()=>({data:{data:{}}})),
       noticesApi.getAll({ limit: 4 }).catch(()=>({data:{data:[]}})),
-      homeworkApi.getAll({ teacherId: user.teacherId, limit: 4 }).catch(()=>({data:{data:[]}})),
+      homeworkApi.getAll(tid ? { teacherId: tid, limit: 4 } : { limit: 4 }).catch(()=>({data:{data:[]}})),
       timetableApi.getMyTimetable().catch(()=>({data:{data:{todaySlots:[]}}})),
     ]).then(([s,n,h,t]) => {
       setStats(s.data?.data || {});
@@ -68,7 +69,7 @@ export default function TeacherDashboard() {
         setLoadError('Could not load dashboard data right now.');
       }
     }).finally(() => setLoading(false));
-  }, [user?.teacherId]);
+  }, [tid]);
 
   const classesCount = stats?.classes ?? stats?.classNames?.length ?? todaySlots.length ?? 0;
   const studentsCount = stats?.students ?? 0;
