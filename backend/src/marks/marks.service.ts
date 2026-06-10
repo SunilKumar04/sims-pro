@@ -1,6 +1,7 @@
 // src/marks/marks.service.ts
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { TenantContextService } from '../tenancy/tenant-context.service';
 
 // ── Grade helper ────────────────────────────────────────────────
 const GRADE = (marks: number, max: number): string => {
@@ -33,13 +34,23 @@ const EXAM_ORDER: Record<string, number> = {
 
 @Injectable()
 export class MarksService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private readonly tenant: TenantContextService,
+  ) {}
+
+  private getSchoolId() {
+    const schoolId = this.tenant.get().schoolId;
+    if (!schoolId) throw new ForbiddenException('School tenant not found');
+    return schoolId;
+  }
 
   // ── Resolve student ID ───────────────────────────────────────
   private async resolveStudentId(raw: string): Promise<string> {
-    const d = await this.prisma.student.findUnique({ where: { id: raw } });
+    const schoolId = this.getSchoolId();
+    const d = await this.prisma.student.findFirst({ where: { id: raw, schoolId } });
     if (d) return d.id;
-    const u = await this.prisma.student.findUnique({ where: { userId: raw } });
+    const u = await this.prisma.student.findFirst({ where: { userId: raw, schoolId } });
     return u?.id ?? raw;
   }
 
@@ -49,8 +60,9 @@ export class MarksService {
 
   private async resolveStudentOrThrow(rawStudentId: string) {
     const studentId = await this.resolveStudentId(rawStudentId);
-    const student = await this.prisma.student.findUnique({
-      where: { id: studentId },
+    const schoolId = this.getSchoolId();
+    const student = await this.prisma.student.findFirst({
+      where: { id: studentId, schoolId },
       include: { user: { select: { name: true, email: true } } },
     });
 
@@ -73,13 +85,14 @@ export class MarksService {
     year?: number;
     records: { studentId: string; subject: string; marks: number; maxMarks?: number; grade?: string }[];
   }) {
+    const schoolId = this.getSchoolId();
     const examType = this.normalizeExamType(dto.examType);
     const year = Number(dto.year) || new Date().getFullYear();
     const results: any[] = [];
 
     for (const record of dto.records ?? []) {
       const studentId = await this.resolveStudentId(record.studentId);
-      const student = await this.prisma.student.findUnique({ where: { id: studentId } });
+      const student = await this.prisma.student.findFirst({ where: { id: studentId, schoolId } });
       if (!student) throw new NotFoundException(`Student not found: ${record.studentId}`);
 
       const marks = Number(record.marks) || 0;
@@ -88,17 +101,17 @@ export class MarksService {
 
       const existing = await this.prisma.mark.findFirst({
         where: {
+          schoolId,
           studentId,
           subject: record.subject,
           examType: examType as any,
           year,
-          OR: student.schoolId ? [{ schoolId: student.schoolId }, { schoolId: null }] : undefined,
-        } as any,
+        },
         orderBy: { createdAt: 'desc' },
       });
 
       const payload = {
-        schoolId: student.schoolId,
+        schoolId,
         studentId,
         subject: record.subject,
         examType: examType as any,
@@ -120,11 +133,12 @@ export class MarksService {
   }
 
   async getByClass(className: string, examType = 'UNIT_TEST', year?: number) {
+    const schoolId = this.getSchoolId();
     const targetYear = Number(year) || new Date().getFullYear();
     const normalizedExamType = this.normalizeExamType(examType);
 
     const data = await this.prisma.mark.findMany({
-      where: { className, examType: normalizedExamType as any, year: targetYear },
+      where: { schoolId, className, examType: normalizedExamType as any, year: targetYear },
       include: { student: { include: { user: { select: { name: true } } } } },
       orderBy: [{ subject: 'asc' }, { student: { roll: 'asc' } }],
     });
@@ -135,7 +149,7 @@ export class MarksService {
   async getByStudent(rawStudentId: string) {
     const student = await this.resolveStudentOrThrow(rawStudentId);
     const marks = await this.prisma.mark.findMany({
-      where: { studentId: student.id },
+      where: { schoolId: student.schoolId ?? this.getSchoolId(), studentId: student.id },
       orderBy: [{ year: 'desc' }, { examType: 'asc' }, { subject: 'asc' }],
     });
 
@@ -162,6 +176,7 @@ export class MarksService {
 
     const examMarks = await this.prisma.mark.findMany({
       where: {
+        schoolId: student.schoolId ?? this.getSchoolId(),
         studentId: student.id,
         examType: normalizedExamType as any,
         year: targetYear,
@@ -174,7 +189,7 @@ export class MarksService {
     const percentage = totalMax > 0 ? Math.round((totalMarks / totalMax) * 100) : 0;
 
     const rankPool = await this.prisma.mark.findMany({
-      where: { className: student.className, examType: normalizedExamType as any, year: targetYear },
+      where: { schoolId: student.schoolId ?? this.getSchoolId(), className: student.className, examType: normalizedExamType as any, year: targetYear },
     });
 
     const studentTotals: Record<string, number> = {};
@@ -233,7 +248,7 @@ export class MarksService {
   async getStudentMarks(rawStudentId: string) {
     const student = await this.resolveStudentOrThrow(rawStudentId);
     const marks = await this.prisma.mark.findMany({
-      where: { studentId: student.id },
+      where: { schoolId: student.schoolId ?? this.getSchoolId(), studentId: student.id },
       orderBy: [{ subject: 'asc' }, { year: 'desc' }],
     });
 
@@ -247,7 +262,7 @@ export class MarksService {
   async getStudentSummary(rawStudentId: string) {
     const student = await this.resolveStudentOrThrow(rawStudentId);
     const marks = await this.prisma.mark.findMany({
-      where: { studentId: student.id },
+      where: { schoolId: student.schoolId ?? this.getSchoolId(), studentId: student.id },
       orderBy: { updatedAt: 'desc' },
     });
     if (!marks.length) return { success: true, data: this.emptyStats(student) };
@@ -276,7 +291,7 @@ export class MarksService {
 
     // Class rank (compare with all students in same class, same exam, same year)
     const classMarks = await this.prisma.mark.findMany({
-      where: { className: student.className, year: latestYear },
+      where: { schoolId: student.schoolId ?? this.getSchoolId(), className: student.className, year: latestYear },
     });
 
     const studentTotals: Record<string, number> = {};
@@ -317,7 +332,7 @@ export class MarksService {
   async getReportCard(rawStudentId: string) {
     const student = await this.resolveStudentOrThrow(rawStudentId);
     const allMarks = await this.prisma.mark.findMany({
-      where:   { studentId: student.id },
+      where:   { schoolId: student.schoolId ?? this.getSchoolId(), studentId: student.id },
       orderBy: [{ year: 'desc' }, { subject: 'asc' }],
     });
 
@@ -372,7 +387,7 @@ export class MarksService {
       // Class rank for latest exam in this year
       const lastET    = examTypes[examTypes.length - 1];
       const classData = await this.prisma.mark.findMany({
-        where: { className: student.className, examType: lastET, year },
+        where: { schoolId: student.schoolId ?? this.getSchoolId(), className: student.className, examType: lastET, year },
       });
       const cTotals: Record<string, number> = {};
       const cMaxes:  Record<string, number> = {};

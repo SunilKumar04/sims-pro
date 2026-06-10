@@ -25,18 +25,12 @@ export class AssignmentsService {
     for (const candidate of candidateIds) {
       const direct = await this.prisma.teacher.findFirst({ where: { id: candidate, schoolId } });
       if (direct) return direct.id;
-      const directAny = await this.prisma.teacher.findFirst({ where: { id: candidate } });
-      if (directAny) return directAny.id;
       const byUser = await this.prisma.teacher.findFirst({ where: { userId: candidate, schoolId } });
       if (byUser) return byUser.id;
-      const byUserAny = await this.prisma.teacher.findFirst({ where: { userId: candidate } });
-      if (byUserAny) return byUserAny.id;
     }
 
     const first = await this.prisma.teacher.findFirst({ where: { schoolId } });
     if (first) return first.id;
-    const anyTeacher = await this.prisma.teacher.findFirst({});
-    if (anyTeacher) return anyTeacher.id;
     throw new NotFoundException('Teacher record not found');
   }
 
@@ -45,7 +39,8 @@ export class AssignmentsService {
     const direct = await this.prisma.student.findFirst({ where: { id, schoolId } });
     if (direct) return direct.id;
     const byUser = await this.prisma.student.findFirst({ where: { userId: id, schoolId } });
-    return byUser?.id ?? id;
+    if (byUser) return byUser.id;
+    throw new NotFoundException('Student record not found');
   }
 
   async create(dto: any, rawTeacherId: string) {
@@ -148,7 +143,7 @@ export class AssignmentsService {
 
     const isLate   = new Date() > assignment.dueDate;
     const existing = await this.prisma.assignmentSubmission.findMany({
-      where: { assignmentId, studentId },
+      where: { assignmentId, studentId, schoolId },
       orderBy: { submittedAt: 'desc' },
     });
 
@@ -177,7 +172,7 @@ export class AssignmentsService {
 
       if (existing.length > 1) {
         await this.prisma.assignmentSubmission.deleteMany({
-          where: { assignmentId, studentId, NOT: { id: latest.id } },
+          where: { assignmentId, studentId, schoolId, NOT: { id: latest.id } },
         });
       }
 

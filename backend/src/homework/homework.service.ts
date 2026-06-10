@@ -23,18 +23,12 @@ export class HomeworkService {
     for (const candidate of candidateIds) {
       const byId = await this.prisma.teacher.findFirst({ where: { id: candidate, schoolId } });
       if (byId) return byId.id;
-      const byIdAny = await this.prisma.teacher.findFirst({ where: { id: candidate } });
-      if (byIdAny) return byIdAny.id;
       const byUser = await this.prisma.teacher.findFirst({ where: { userId: candidate, schoolId } });
       if (byUser) return byUser.id;
-      const byUserAny = await this.prisma.teacher.findFirst({ where: { userId: candidate } });
-      if (byUserAny) return byUserAny.id;
     }
 
     const first = await this.prisma.teacher.findFirst({ where: { schoolId } });
     if (first) return first.id;
-    const anyTeacher = await this.prisma.teacher.findFirst({});
-    if (anyTeacher) return anyTeacher.id;
     throw new NotFoundException('Teacher record not found');
   }
 
