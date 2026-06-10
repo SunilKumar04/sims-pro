@@ -9,7 +9,6 @@ import ModalPortal from '@/components/ui/ModalPortal';
 
 const GRADES   = ['Nursery','LKG','UKG','1','2','3','4','5','6','7','8','9','10','11','12'];
 const SECTIONS = ['A','B','C','D','E'];
-const ROOMS    = ['R-101','R-102','R-103','R-201','R-202','R-203','R-301','R-302','R-303','Lab-1','Lab-2','Hall-A'];
 const SUBJECTS = ['Mathematics','Physics','Chemistry','Biology','English','Hindi','History','Geography','Computer Science','Physical Education','Economics'];
 
 const GRADE_COLORS = [
@@ -460,10 +459,12 @@ export default function AdminClasses() {
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <div>
                   <label className="block text-xs font-bold mb-1.5 uppercase tracking-wider" style={{ color: 'rgba(255,255,255,0.4)' }}>Classroom / Room No.</label>
-                  <select value={form.room || ''} onChange={e => sf('room', e.target.value)} className="sims-input">
-                    <option value="">Select room</option>
-                    {ROOMS.map(r => <option key={r} value={r}>{r}</option>)}
-                  </select>
+                  <input
+                    value={form.room || ''}
+                    onChange={e => sf('room', e.target.value)}
+                    className="sims-input"
+                    placeholder="Enter classroom or room number"
+                  />
                 </div>
                 <div>
                   <label className="block text-xs font-bold mb-1.5 uppercase tracking-wider" style={{ color: 'rgba(255,255,255,0.4)' }}>No. of Students</label>
