@@ -257,7 +257,7 @@ export default function SuperAdminLoginPage() {
             {error && <div style={errBox}>⚠️ {error}</div>}
 
             <button type="submit" disabled={loading} style={btn}>
-              {loading ? '⏳ Signing in…' : '→ Enter Super Admin Console'}
+              {loading ? '⏳ Signing in…' : 'Enter Super Admin Console'}
             </button>
           </form>
         </div>

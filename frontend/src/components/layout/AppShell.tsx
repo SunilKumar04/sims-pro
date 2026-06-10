@@ -322,7 +322,7 @@ export default function AppShell({ children, title, subtitle }: Props) {
                 <div style={{ padding:'10px 14px',borderTop:'1px solid rgba(255,255,255,0.07)' }}>
                   <Link href={`/${role.toLowerCase()}/notices`} onClick={()=>setNotifOpen(false)}
                         style={{ display:'block',textAlign:'center',fontSize:12,fontWeight:700,color:'#F0C040',textDecoration:'none' }}>
-                    View all →
+                    View all
                   </Link>
                 </div>
               </div>

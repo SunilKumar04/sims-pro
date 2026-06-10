@@ -179,7 +179,7 @@ export default function AdminDashboard() {
             </div>
           ))}
           <Link href="/admin/attendance" className="mt-4 block text-center text-xs font-bold py-2 rounded-xl transition-all hover:bg-white/10 glass">
-            View Attendance →
+            View Attendance
           </Link>
         </div>
 

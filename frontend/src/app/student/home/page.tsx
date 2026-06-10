@@ -144,7 +144,7 @@ export default function StudentHome() {
             </div>
           )}
           <Link href="/student/attendance" className="block text-center mt-3 text-xs font-bold text-yellow-400 hover:text-yellow-300">
-            View Full Calendar →
+            View Full Calendar
           </Link>
         </div>
 
@@ -174,7 +174,7 @@ export default function StudentHome() {
             </div>
           </div>
           <Link href="/student/fees" className="block text-center text-xs font-bold text-yellow-400 hover:text-yellow-300">
-            View Receipt & Details →
+            View Receipt & Details
           </Link>
         </div>
       </div>

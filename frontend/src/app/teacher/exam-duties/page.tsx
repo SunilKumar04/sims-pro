@@ -247,7 +247,7 @@ export default function TeacherExamDuties() {
                         </div>
                       )}
                       <div className="flex-1 text-right text-xs text-white/25">
-                        Tap to view details →
+                        Tap to view details
                       </div>
                     </div>
                   </div>

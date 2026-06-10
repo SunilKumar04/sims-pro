@@ -479,7 +479,7 @@ export default function TeacherSessions() {
           <div className="flex gap-3">
             <button onClick={() => setView('today')}
                     className="px-6 py-3 rounded-xl text-sm font-bold glass hover:bg-white/10">
-              ← Back
+              Back
             </button>
             {!session.isLocked && (
               <>
@@ -543,7 +543,7 @@ export default function TeacherSessions() {
                           {!s.isLocked && (
                             <button onClick={() => void openSession(s.id)}
                                     className="text-xs font-bold text-yellow-400 hover:text-yellow-300">
-                              Edit →
+                              Edit
                             </button>
                           )}
                           <button onClick={() => void removeSession(s)}

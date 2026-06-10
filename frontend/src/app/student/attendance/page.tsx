@@ -147,7 +147,7 @@ function PredictorBar({
           <div style={{ fontSize: 22, fontWeight: 900, color: pctColor(curPct) }}>{curPct}%</div>
           <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)' }}>Now</div>
         </div>
-        <div style={{ fontSize: 18, color: 'rgba(255,255,255,0.2)' }}>→</div>
+        <div style={{ fontSize: 18, color: 'rgba(255,255,255,0.2)' }}>•</div>
         <div style={{ textAlign: 'center', flex: 1 }}>
           <div style={{ fontSize: 22, fontWeight: 900, color: col }}>{newPct}%</div>
           <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)' }}>After +{extra}</div>

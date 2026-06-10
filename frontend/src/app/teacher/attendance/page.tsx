@@ -148,7 +148,7 @@ export default function TeacherAttendance() {
         {showSummary && (
           <button onClick={() => setShowSummary(false)}
                   className="px-4 py-2.5 rounded-xl text-xs font-bold glass hover:bg-white/10 transition-all">
-            ← Back to Marking
+            Back to Marking
           </button>
         )}
       </div>

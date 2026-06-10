@@ -143,7 +143,7 @@ export default function AdminTimetable() {
     setSaving(true);
     try {
       await upsert(day, period, data);
-      toast.success('Copied!', `${data.subject} → ${DAYS[day-1]} P${period}`);
+      toast.success('Copied!', `${data.subject} to ${DAYS[day-1]} P${period}`);
       void loadSlots();
     } catch { toast.error('Error','Could not copy slot'); }
     finally { setSaving(false); dragData.current = null; }
@@ -201,7 +201,7 @@ export default function AdminTimetable() {
         endTime:   s.endTime,
         room:      s.room ?? '',
       })));
-      toast.success('Day Copied', `${DAYS[copyFrom-1]} → ${DAYS[copyTo-1]}`);
+      toast.success('Day Copied', `${DAYS[copyFrom-1]} to ${DAYS[copyTo-1]}`);
       setCopyModal(false);
       void loadSlots();
     } catch { toast.error('Error','Could not copy day'); }

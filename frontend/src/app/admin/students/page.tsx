@@ -356,7 +356,7 @@ export default function AdminStudents() {
                   <input type="email" value={form.email||''} onChange={e=>f('email',e.target.value)} className="sims-input"
                          placeholder="Auto-generated if blank"/>
                   <p className="text-xs mt-1" style={{color:'rgba(255,255,255,0.3)'}}>
-                    Leave blank → auto: {form.roll?`${form.roll.toLowerCase().replace(/[^a-z0-9]/g,'')}@student.gnpss.edu.in`:'roll@student.gnpss.edu.in'}
+                    Leave blank for auto: {form.roll?`${form.roll.toLowerCase().replace(/[^a-z0-9]/g,'')}@student.gnpss.edu.in`:'roll@student.gnpss.edu.in'}
                   </p>
                 </div>
               )}

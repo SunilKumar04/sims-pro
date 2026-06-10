@@ -337,20 +337,31 @@ export default function LoginClient() {
                 </button>
               </div>
             </div>
-            <div style={{ textAlign: 'right', marginBottom: 22 }}>
-              <button type="button" onClick={() => { setForgotEmail(email); clearMessages(); setScreen('forgot'); }} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, color: tenant.branding.accentColor, fontWeight: 700, padding: 0, fontFamily: 'Outfit, sans-serif' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginTop: 10, marginBottom: 22 }}>
+              <button
+                type="button"
+                onClick={() => router.push(portalHome)}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, color: tenant.branding.accentColor, fontWeight: 800, padding: 0, fontFamily: 'Outfit, sans-serif' }}
+              >
+                Back to portal
+              </button>
+              <button
+                type="button"
+                onClick={() => { setForgotEmail(email); clearMessages(); setScreen('forgot'); }}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, color: tenant.branding.accentColor, fontWeight: 700, padding: 0, fontFamily: 'Outfit, sans-serif' }}
+              >
                 Forgot password?
               </button>
             </div>
             {error && <div style={errBox}>⚠️ {error}</div>}
-            <button type="submit" disabled={loading} style={btn}>{loading ? '⏳ Signing in…' : '→ Sign In'}</button>
+            <button type="submit" disabled={loading} style={{ ...btn, marginTop: 8 }}>{loading ? '⏳ Signing in…' : 'Sign In'}</button>
 
           </form>
         )}
 
         {screen === 'forgot' && (
           <form onSubmit={handleForgot} autoComplete="off">
-            <button type="button" style={back} onClick={() => { clearMessages(); setScreen('login'); }}>← Back to login</button>
+            <button type="button" style={back} onClick={() => { clearMessages(); setScreen('login'); }}>Back to login</button>
             <h1 style={{ margin: '0 0 6px', fontSize: isCompact ? 28 : 32, fontWeight: 900, color: 'white', fontFamily: 'Outfit, sans-serif' }}>Forgot Password?</h1>
             <p style={{ margin: '0 0 28px', fontSize: 14, color: 'rgba(255,255,255,0.4)', lineHeight: 1.6 }}>Enter your registered email. We&apos;ll send a 6-digit reset code valid for 15 minutes.</p>
             <div style={{ marginBottom: 20 }}>
@@ -370,7 +381,7 @@ export default function LoginClient() {
 
         {screen === 'reset' && (
           <form onSubmit={handleReset} autoComplete="off">
-            <button type="button" style={back} onClick={() => { clearMessages(); setScreen('forgot'); }}>← Back</button>
+            <button type="button" style={back} onClick={() => { clearMessages(); setScreen('forgot'); }}>Back</button>
             <h1 style={{ margin: '0 0 6px', fontSize: isCompact ? 28 : 32, fontWeight: 900, color: 'white', fontFamily: 'Outfit, sans-serif' }}>Enter Reset Code</h1>
             <p style={{ margin: '0 0 24px', fontSize: 14, color: 'rgba(255,255,255,0.4)' }}>Check your email or server logs for the 6-digit code.</p>
             {devToken && (
@@ -429,7 +440,7 @@ export default function LoginClient() {
             <h1 style={{ margin: 0, fontSize: 28, fontWeight: 900, color: 'white', fontFamily: 'Outfit, sans-serif' }}>Password Updated!</h1>
             <p style={{ margin: '12px auto 32px', fontSize: 14, color: 'rgba(255,255,255,0.45)', maxWidth: 320, lineHeight: 1.7 }}>Your password has been reset successfully. You can now log in with your new password.</p>
             <button onClick={() => { clearMessages(); setScreen('login'); setDevToken(''); setResetToken(''); setNewPassword(''); setConfirmPwd(''); }} style={{ ...btn, width: 'auto', padding: '13px 48px', cursor: 'pointer' }}>
-              → Go to Login
+              Go to Login
             </button>
           </div>
         )}
