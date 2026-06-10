@@ -366,13 +366,6 @@ async function main() {
   }
 
   console.log('\n🎉 Database seeded successfully!');
-  console.log('\n📋 Login Credentials:');
-  console.log('─────────────────────────────────────');
-  console.log('SuperAdmin: superadmin@sims.com / SuperAdmin@1234');
-  console.log('Admin:   admin@gnpss.edu.in / Admin@1234');
-  console.log('Teacher: sunita@gnpss.edu.in / Teacher@1234');
-  console.log('Student: aarav@student.gnpss.edu.in / Student@1234');
-  console.log('─────────────────────────────────────');
 }
 
 main()

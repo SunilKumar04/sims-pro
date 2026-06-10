@@ -476,14 +476,14 @@ export default function AdminTeachers() {
                 {modal==='add'&&(
                   <div>
                     <label className="block text-xs font-bold mb-1.5 uppercase tracking-wider" style={{color:'rgba(255,255,255,0.4)'}}>Password</label>
-                    <input type="password" value={form.password||''} onChange={e=>setField('password',e.target.value)} className="sims-input" placeholder="Default: Teacher@1234"/>
+                    <input type="password" value={form.password||''} onChange={e=>setField('password',e.target.value)} className="sims-input" placeholder="Set an initial password"/>
                   </div>
                 )}
               </div>
               {modal==='add'&&(
                 <div className="flex items-center gap-2 px-4 py-3 rounded-xl text-xs"
                      style={{background:'rgba(212,160,23,0.07)',border:'1px solid rgba(212,160,23,0.2)',color:'rgba(255,255,255,0.5)'}}>
-                  💡 Default password is <strong className="text-yellow-400 mx-1">Teacher@1234</strong> if not set. Teacher should change on first login.
+                  💡 Leave blank only if your setup flow assigns credentials automatically. The teacher should change the initial password on first login.
                 </div>
               )}
             </div>

@@ -362,7 +362,7 @@ export default function AdminStudents() {
               )}
               {modal==='add' && (
                 <div className="px-4 py-3 rounded-xl text-xs" style={{background:'rgba(212,160,23,0.07)',border:'1px solid rgba(212,160,23,0.2)',color:'rgba(255,255,255,0.5)'}}>
-                  💡 Default password: <strong className="text-yellow-400">Student@1234</strong> — student should change on first login.
+                  💡 Leave password blank only if your setup flow auto-generates credentials. Students should change the initial password on first login.
                 </div>
               )}
             </div>

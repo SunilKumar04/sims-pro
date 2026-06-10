@@ -122,12 +122,6 @@ export default function LoginClient() {
     }
   };
 
-  const demoAccounts = [
-    { role: 'Admin', email: 'admin@gnpss.edu.in', pw: 'Admin@1234', color: '#F0C040' },
-    { role: 'Teacher', email: 'sunita@gnpss.edu.in', pw: 'Teacher@1234', color: '#93C5FD' },
-    { role: 'Student', email: 'aarav@student.gnpss.edu.in', pw: 'Student@1234', color: '#86EFAC' },
-  ];
-
   const field: React.CSSProperties = {
     width: '100%',
     padding: '12px 16px',
@@ -351,26 +345,6 @@ export default function LoginClient() {
             {error && <div style={errBox}>⚠️ {error}</div>}
             <button type="submit" disabled={loading} style={btn}>{loading ? '⏳ Signing in…' : '→ Sign In'}</button>
 
-            <div style={{ marginTop: 28 }}>
-              <div style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.18)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 10, fontFamily: 'Outfit, sans-serif' }}>
-                Demo Accounts
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
-                {demoAccounts.map((d) => (
-                  <button
-                    key={d.role}
-                    type="button"
-                    onClick={() => { setEmail(d.email); setPassword(d.pw); clearMessages(); }}
-                    style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '9px 14px', borderRadius: 12, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)', cursor: 'pointer' }}
-                    onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.07)'}
-                    onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.04)'}
-                  >
-                    <span style={{ fontSize: 12, fontWeight: 700, color: d.color, fontFamily: 'Outfit, sans-serif' }}>{d.role}</span>
-                    {!isCompact && <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', fontFamily: 'monospace' }}>{d.email}</span>}
-                  </button>
-                ))}
-              </div>
-            </div>
           </form>
         )}
 
