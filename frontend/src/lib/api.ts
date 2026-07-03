@@ -312,3 +312,44 @@ export const assignmentsApi = {
   submit:                (id: string, data: any) => api.post(`/assignments/${id}/submit`, data),
   grade:                 (subId: string, data: any) => api.patch(`/assignments/submissions/${subId}/grade`, data),
 };
+
+// ══════════════════════════════════════
+// REPORT CARD
+// ══════════════════════════════════════
+export const reportCardApi = {
+  // ── Templates ──
+  getTemplates: () =>
+    api.get('/report-card/templates'),
+
+  getTemplate: (id: string) =>
+    api.get(`/report-card/templates/${id}`),
+
+  createTemplate: (data: any) =>
+    api.post('/report-card/templates', data),
+
+  updateTemplate: (id: string, data: any) =>
+    api.put(`/report-card/templates/${id}`, data),
+
+  deleteTemplate: (id: string) =>
+    api.delete(`/report-card/templates/${id}`),
+
+  duplicateTemplate: (id: string) =>
+    api.post(`/report-card/templates/${id}/duplicate`, {}),
+
+  // ── Marksheet data ──
+  getMarksheetData: (studentId: string, examType: string, year: number, templateId?: string) =>
+    api.get(`/report-card/marksheet/student/${studentId}`, { params: { examType, year, ...(templateId && { templateId }) } }),
+
+  getMyMarksheet: (examType: string, year: number, templateId?: string) =>
+    api.get('/report-card/marksheet/me', { params: { examType, year, ...(templateId && { templateId }) } }),
+
+  getBulkMarksheetData: (className: string, examType: string, year: number, templateId?: string) =>
+    api.get('/report-card/marksheet/bulk', { params: { className, examType, year, ...(templateId && { templateId }) } }),
+
+  // ── History ──
+  recordGenerated: (data: any) =>
+    api.post('/report-card/marksheet/record', data),
+
+  getHistory: (params?: any) =>
+    api.get('/report-card/marksheet/history', { params }),
+};

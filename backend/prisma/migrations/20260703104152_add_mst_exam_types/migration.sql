@@ -1,0 +1,3 @@
+-- AlterEnum: add MST1 and MST2 to ExamType
+ALTER TYPE "ExamType" ADD VALUE IF NOT EXISTS 'MST1';
+ALTER TYPE "ExamType" ADD VALUE IF NOT EXISTS 'MST2';

@@ -59,6 +59,8 @@ enum AttendanceStatus {
 enum ExamType {
   UNIT_TEST
   MID_TERM
+  MST1
+  MST2
   FINAL
   PRACTICALS
 }
@@ -137,6 +139,8 @@ model School {
   subscriptions   Subscription[]
   roles           AccessRole[]
   settings        SchoolSetting[]
+  reportCardTemplates ReportCardTemplate[]
+  generatedMarksheets GeneratedMarksheet[]
 
   @@map("schools")
 }
@@ -232,26 +236,31 @@ model SchoolSetting {
 }
 
 model Student {
-  id          String   @id @default(cuid())
-  schoolId    String?
-  school      School?  @relation(fields: [schoolId], references: [id], onDelete: Cascade)
-  userId      String   @unique
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  roll        String
-  className   String
-  phone       String
-  parentName  String
-  parentPhone String   @default("")
-  address     String
-  dob         DateTime
-  photoUrl    String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id           String   @id @default(cuid())
+  schoolId     String?
+  school       School?  @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  userId       String   @unique
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  roll         String
+  className    String
+  phone        String
+  parentName   String
+  parentPhone  String   @default("")
+  address      String
+  dob          DateTime
+  photoUrl     String?
+  admissionNo  String?
+  fatherName   String?
+  motherName   String?
+  gender       String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
   fees                  Fee[]
   attendance            Attendance[]
   marks                 Mark[]
   subjectAttendance     SubjectAttendance[]
   assignmentSubmissions AssignmentSubmission[]
+  generatedMarksheets   GeneratedMarksheet[]
   @@unique([schoolId, roll])
   @@map("students")
 }
@@ -569,4 +578,89 @@ model ExamInvigilator {
   @@unique([schoolId, dateSheetEntryId, teacherId])
   @@index([schoolId, teacherId])
   @@map("exam_invigilators")
+}
+
+model ReportCardTemplate {
+  id                       String   @id @default(cuid())
+  schoolId                 String
+  school                   School   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  name                     String
+  description              String?
+  isDefault                Boolean  @default(false)
+  isActive                 Boolean  @default(true)
+  // Branding
+  logoUrl                  String?
+  schoolName               String?
+  schoolAddress            String?
+  schoolPhone              String?
+  schoolEmail              String?
+  schoolWebsite            String?
+  affiliationNo            String?
+  academicSession          String?
+  schoolMotto              String?
+  // Header
+  reportTitle              String   @default("REPORT CARD")
+  headerBgColor            String   @default("#1a3a6b")
+  headerTextColor          String   @default("#ffffff")
+  fontFamily               String   @default("Arial, sans-serif")
+  headerAlignment          String   @default("center")
+  // Layout
+  paperSize                String   @default("A4")
+  orientation              String   @default("PORTRAIT")
+  marginTop                Int      @default(15)
+  marginBottom             Int      @default(15)
+  marginLeft               Int      @default(15)
+  marginRight              Int      @default(15)
+  // JSON fields
+  studentFields            Json?
+  tableColumns             Json?
+  sectionLayout            Json?
+  gradingSystem            Json?
+  // Display flags
+  showTotal                Boolean  @default(true)
+  showPercentage           Boolean  @default(true)
+  showGrade                Boolean  @default(true)
+  showRank                 Boolean  @default(true)
+  showResult               Boolean  @default(true)
+  showAttendance           Boolean  @default(false)
+  showPromotion            Boolean  @default(false)
+  showTeacherRemarks       Boolean  @default(true)
+  showPrincipalRemarks     Boolean  @default(true)
+  passingPercentage        Int      @default(40)
+  // Signatures / footer
+  principalSignatureUrl    String?
+  classTeacherSignatureUrl String?
+  schoolSealUrl            String?
+  footerNote               String?
+  showQrCode               Boolean  @default(false)
+  showGeneratedDate        Boolean  @default(true)
+  showWatermark            Boolean  @default(false)
+  watermarkText            String?
+  createdAt                DateTime @default(now())
+  updatedAt                DateTime @updatedAt
+  generatedMarksheets      GeneratedMarksheet[]
+
+  @@index([schoolId, isDefault])
+  @@map("report_card_templates")
+}
+
+model GeneratedMarksheet {
+  id            String              @id @default(cuid())
+  schoolId      String
+  school        School              @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  studentId     String
+  student       Student             @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  templateId    String?
+  template      ReportCardTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull)
+  examType      String
+  academicYear  Int
+  className     String?
+  pdfUrl        String?
+  includePhoto  Boolean             @default(true)
+  includeQrCode Boolean             @default(false)
+  generatedAt   DateTime            @default(now())
+
+  @@index([schoolId, studentId])
+  @@index([schoolId, examType])
+  @@map("generated_marksheets")
 }

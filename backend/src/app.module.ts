@@ -20,6 +20,7 @@ import { TimetableModule } from './timetable/timetable.module';
 import { SessionsModule } from './sessions/sessions.module';
 import { ExamsModule } from './exams/exams.module';
 import { AssignmentsModule } from './assignments/assignments.module';
+import { ReportCardModule } from './report-card/report-card.module';
 
 @Module({
   imports: [
@@ -46,6 +47,7 @@ import { AssignmentsModule } from './assignments/assignments.module';
     SessionsModule,
     ExamsModule,
     AssignmentsModule,
+    ReportCardModule,
   ],
 })
 export class AppModule implements NestModule {
